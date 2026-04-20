@@ -121,7 +121,7 @@ const Settings = () => {
   }, [profile]);
 
   const handleLogout = () => {
-    localStorage.removeItem("rw_admin_sec_tkn");
+    localStorage.removeItem("resto_auth_token");
     localStorage.removeItem("rw_admin_info");
     window.location.reload();
   };

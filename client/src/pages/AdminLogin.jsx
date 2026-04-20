@@ -44,7 +44,7 @@ const AdminLogin = () => {
       const response = await AxiosAdmin.post(SummaryApi.adminLogin.url, data);
 
       if (response.data.success) {
-        localStorage.setItem("rw_admin_sec_tkn", response.data.token);
+        localStorage.setItem("resto_auth_token", response.data.token);
         localStorage.setItem("rw_admin_info", JSON.stringify(response.data));
         toast.success("Login successful! Welcome back.");
         navigate("/");

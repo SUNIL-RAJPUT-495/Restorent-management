@@ -6,7 +6,7 @@ import { Navigate } from 'react-router-dom'
  * Agar valid token nahi mila localStorage mein toh login page pe redirect kar dega.
  */
 export const ProtectedAdminRoute = ({ children }) => {
-    const token = localStorage.getItem("rw_admin_sec_tkn")
+    const token = localStorage.getItem("resto_auth_token")
     
     if (!token) {
         return <Navigate to="/admin/login" replace />

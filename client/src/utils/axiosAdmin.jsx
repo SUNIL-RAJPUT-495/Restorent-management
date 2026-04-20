@@ -9,7 +9,7 @@ const AxiosAdmin = axios.create({
 
 AxiosAdmin.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("rw_admin_sec_tkn");
+        const token = localStorage.getItem("resto_auth_token");
 
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -23,7 +23,7 @@ AxiosAdmin.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            localStorage.removeItem("rw_admin_sec_tkn");
+            localStorage.removeItem("resto_auth_token");
             localStorage.removeItem("rw_admin_info");
             window.dispatchEvent(new CustomEvent("on-unauthorized-admin"));
         }
