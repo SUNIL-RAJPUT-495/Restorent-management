@@ -115,7 +115,7 @@ const POS = () => {
   };
 
   return (
-    <div className="grid h-[calc(100vh-9rem)] gap-4 lg:grid-cols-[1fr_400px]">
+    <div className="grid h-auto lg:h-[calc(100vh-9rem)] gap-4 grid-cols-1 lg:grid-cols-[1fr_400px]">
       {/* Menu side */}
       <div className="flex min-h-0 flex-col rounded-2xl border border-border bg-card p-4 shadow-soft">
         <div className="flex flex-wrap items-center gap-3">
@@ -170,7 +170,7 @@ const POS = () => {
           </TabsList>
         </Tabs>
 
-        <div className="mt-4 grid flex-1 auto-rows-min gap-3 overflow-y-auto pr-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-4 grid flex-1 auto-rows-min gap-3 overflow-y-auto no-scrollbar pr-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
           {filtered.map((m) => (
             <button
               key={m._id || m.id}
@@ -221,7 +221,7 @@ const POS = () => {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4">
           {cart.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-sm text-muted-foreground">
               <Receipt className="mb-3 h-10 w-10 opacity-40" />

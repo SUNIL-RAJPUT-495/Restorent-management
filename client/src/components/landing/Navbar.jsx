@@ -18,7 +18,7 @@ export const Navbar = () => {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-accent text-accent-foreground shadow-soft">
             <UtensilsCrossed className="h-5 w-5" />
           </span>
-          <span className="text-lg tracking-tight">RestoOS</span>
+          <span className="text-lg tracking-tight">ONEBY</span>
         </a>
 
         <nav className="hidden items-center gap-8 md:flex">

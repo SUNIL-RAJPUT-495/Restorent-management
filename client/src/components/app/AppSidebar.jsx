@@ -46,10 +46,10 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="leading-tight">
               <p className="text-sm font-bold text-primary-foreground">
-                RestoOS
+                ONEBY
               </p>
               <p className="text-[11px] text-primary-foreground/70">
-                Bella Cucina · Downtown
+                Jaipur, Rajasthan
               </p>
             </div>
           )}

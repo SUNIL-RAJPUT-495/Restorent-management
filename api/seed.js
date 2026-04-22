@@ -16,7 +16,7 @@ const seedData = async () => {
     await Admin.deleteMany();
     await Product.deleteMany();
     await Table.deleteMany();
-
+    
     // Admin
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('admin123', salt);
