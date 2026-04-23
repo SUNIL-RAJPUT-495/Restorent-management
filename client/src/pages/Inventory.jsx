@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
-import { ingredients as seed, menuItems } from "@/data/mockData";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import AxiosAdmin from "@/utils/axiosAdmin";
+import SummaryApi from "@/common/SummerAPI";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -13,52 +15,131 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
   AlertTriangle,
   RotateCw,
   Search,
-  ShoppingBag,
+  Plus,
+  Trash2,
+  Edit2,
   MinusCircle,
+  FlaskConical,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Inventory = () => {
-  const [items, setItems] = useState(seed);
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
+  const [ingDialogOpen, setIngDialogOpen] = useState(false);
+  const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
+  const [editingIng, setEditingIng] = useState(null);
+  const [editingRecipeProduct, setEditingRecipeProduct] = useState(null);
+  
+  const [ingDraft, setIngDraft] = useState({
+    name: "", unit: "kg", stock: 0, threshold: 5, costPerUnit: 0, supplier: ""
+  });
+
+  // Fetch Ingredients
+  const { data: ingredients = [] } = useQuery({
+    queryKey: ["ingredients"],
+    queryFn: async () => {
+      const response = await AxiosAdmin.get(SummaryApi.getIngredients.url);
+      return response.data;
+    },
+  });
+
+  // Fetch Products
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const response = await AxiosAdmin.get(SummaryApi.getProducts.url);
+      return response.data;
+    },
+  });
+
+  // Ingredient Mutations
+  const ingMutation = useMutation({
+    mutationFn: async ({ id, data, method }) => {
+      const api = id ? SummaryApi.updateIngredient(id) : SummaryApi.addIngredient;
+      const response = await AxiosAdmin[id ? 'put' : 'post'](api.url, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["ingredients"]);
+      setIngDialogOpen(false);
+    }
+  });
+
+  const deleteIngMutation = useMutation({
+    mutationFn: async (id) => {
+      const api = SummaryApi.deleteIngredient(id);
+      await AxiosAdmin.delete(api.url);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["ingredients"]);
+      toast.success("Ingredient removed");
+    }
+  });
+
+  // Product/Recipe Mutation
+  const recipeMutation = useMutation({
+    mutationFn: async ({ id, recipe }) => {
+      const api = SummaryApi.updateProduct(id);
+      await AxiosAdmin.put(api.url, { recipe });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["products"]);
+      setRecipeDialogOpen(false);
+      toast.success("Recipe updated");
+    }
+  });
 
   const filtered = useMemo(
     () =>
-      items.filter((i) => i.name.toLowerCase().includes(query.toLowerCase())),
-    [items, query],
+      ingredients.filter((i) => i.name.toLowerCase().includes(query.toLowerCase())),
+    [ingredients, query],
   );
-  const lowCount = items.filter((i) => i.stock <= i.threshold).length;
-  const totalValue = items.reduce((s, i) => s + i.stock * i.costPerUnit, 0);
 
-  const reload = (id) => {
-    setItems((arr) =>
-      arr.map((i) => (i.id === id ? { ...i, stock: i.threshold * 4 } : i)),
-    );
-    toast.success("Stock reloaded");
+  const lowCount = ingredients.filter((i) => i.stock <= i.threshold).length;
+  const totalValue = ingredients.reduce((s, i) => s + i.stock * i.costPerUnit, 0);
+
+  const saveIngredient = () => {
+    if (!ingDraft.name.trim()) return toast.error("Name is required");
+    ingMutation.mutate({ id: editingIng?._id, data: ingDraft });
+    toast.success(editingIng ? "Updated" : "Added");
   };
-  const simulateDeduction = (id) => {
-    setItems((arr) =>
-      arr.map((i) =>
-        i.id === id
-          ? {
-              ...i,
-              stock: Math.max(0, +(i.stock - i.threshold * 0.1).toFixed(2)),
-            }
-          : i,
-      ),
-    );
-    toast("Auto-deduction simulated", {
-      description: "Sale recorded — ingredient deducted.",
-    });
+
+  const openAddIng = () => {
+    setEditingIng(null);
+    setIngDraft({ name: "", unit: "kg", stock: 0, threshold: 5, costPerUnit: 0, supplier: "" });
+    setIngDialogOpen(true);
+  };
+
+  const openEditIng = (i) => {
+    setEditingIng(i);
+    setIngDraft({ ...i });
+    setIngDialogOpen(true);
+  };
+  
+  const openEditRecipe = (p) => {
+    setEditingRecipeProduct(p);
+    setRecipeDialogOpen(true);
   };
 
   return (
     <div className="space-y-5">
       <div className="grid gap-3 md:grid-cols-3">
-        <Stat label="Items tracked" value={String(items.length)} />
+        <Stat label="Items tracked" value={String(ingredients.length)} />
         <Stat
           label="Low-stock alerts"
           value={String(lowCount)}
@@ -85,9 +166,54 @@ const Inventory = () => {
                   className="pl-9"
                 />
               </div>
-              <Button variant="outline">
-                <ShoppingBag className="mr-1 h-4 w-4" /> New Purchase Order
-              </Button>
+              <Dialog open={ingDialogOpen} onOpenChange={setIngDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={openAddIng} className="bg-primary text-primary-foreground">
+                    <Plus className="mr-1 h-4 w-4" /> New Ingredient
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingIng ? "Edit Ingredient" : "Add New Ingredient"}</DialogTitle>
+                    <DialogDescription>
+                      {editingIng ? "Update ingredient details and stock levels." : "Enter details for the new inventory item."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-1.5">
+                      <Label>Name</Label>
+                      <Input value={ingDraft.name} onChange={e => setIngDraft({...ingDraft, name: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-1.5">
+                        <Label>Stock</Label>
+                        <Input type="number" value={ingDraft.stock} onChange={e => setIngDraft({...ingDraft, stock: +e.target.value})} />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Threshold</Label>
+                        <Input type="number" value={ingDraft.threshold} onChange={e => setIngDraft({...ingDraft, threshold: +e.target.value})} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-1.5">
+                        <Label>Unit</Label>
+                        <Input value={ingDraft.unit} onChange={e => setIngDraft({...ingDraft, unit: e.target.value})} />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Cost per Unit</Label>
+                        <Input type="number" value={ingDraft.costPerUnit} onChange={e => setIngDraft({...ingDraft, costPerUnit: +e.target.value})} />
+                      </div>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label>Supplier</Label>
+                      <Input value={ingDraft.supplier} onChange={e => setIngDraft({...ingDraft, supplier: e.target.value})} />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={saveIngredient}>Save Ingredient</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="overflow-x-auto">
@@ -107,11 +233,11 @@ const Inventory = () => {
                   {filtered.map((i) => {
                     const pct = Math.min(
                       100,
-                      Math.round((i.stock / (i.threshold * 4)) * 100),
+                      Math.round((i.stock / (i.threshold * 4)) * 100) || 0,
                     );
                     const low = i.stock <= i.threshold;
                     return (
-                      <TableRow key={i.id} className="align-middle">
+                      <TableRow key={i._id} className="align-middle">
                         <TableCell>
                           <p className="font-semibold text-primary">{i.name}</p>
                           <p className="text-xs text-muted-foreground">
@@ -142,18 +268,19 @@ const Inventory = () => {
                           <div className="inline-flex gap-2">
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={() => simulateDeduction(i.id)}
-                              title="Simulate sale"
+                              variant="ghost"
+                              onClick={() => openEditIng(i)}
+                              className="h-8 w-8 p-0"
                             >
-                              <MinusCircle className="h-3.5 w-3.5" />
+                              <Edit2 className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => reload(i.id)}
-                              className="bg-gradient-accent text-accent-foreground"
+                              variant="ghost"
+                              onClick={() => deleteIngMutation.mutate(i._id)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                             >
-                              <RotateCw className="mr-1 h-3.5 w-3.5" /> Load
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>
@@ -168,57 +295,140 @@ const Inventory = () => {
 
         <TabsContent value="recipes" className="mt-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {menuItems
-              .filter((m) => m.recipe.length > 0)
-              .map((m) => {
-                const margin = (((m.price - m.cost) / m.price) * 100).toFixed(
-                  0,
-                );
-                return (
-                  <div
-                    key={m.id}
-                    className="rounded-2xl border border-border bg-card p-5 shadow-soft"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-primary">
-                          {m.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {m.category}
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-secondary-soft px-2 py-0.5 text-[11px] font-bold text-secondary">
-                        {margin}% margin
-                      </span>
+            {products.map((m) => {
+              const rawCost = m.recipe?.reduce((acc, r) => {
+                const ing = ingredients.find(ing => (ing._id || ing.id) === r.ingredientId);
+                return acc + (ing ? ing.costPerUnit * r.quantity : 0);
+              }, 0) || 0;
+              
+              const margin = m.price > 0 ? (((m.price - rawCost) / m.price) * 100).toFixed(0) : 0;
+              
+              return (
+                <div
+                  key={m._id || m.id}
+                  className="group relative rounded-2xl border border-border bg-card p-5 shadow-soft transition hover:border-accent/40"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-primary">
+                        {m.name}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {m.category}
+                      </p>
                     </div>
-                    <ul className="mt-3 space-y-1.5 text-sm">
-                      {m.recipe.map((r) => {
-                        const ing = items.find((i) => i.id === r.ingredientId);
-                        if (!ing) return null;
-                        return (
-                          <li
-                            key={r.ingredientId}
-                            className="flex justify-between text-foreground/80"
-                          >
-                            <span>{ing.name}</span>
-                            <span className="font-medium">
-                              {r.quantity} {ing.unit}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs">
-                      <span className="text-muted-foreground">Plate cost</span>
-                      <span className="font-bold text-primary">
-                        ₹{m.cost.toFixed(2)}
-                      </span>
-                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${+margin > 60 ? 'bg-success/10 text-success' : 'bg-secondary-soft text-secondary'}`}>
+                      {margin}% margin
+                    </span>
                   </div>
-                );
-              })}
+                  
+                  <ul className="mt-4 space-y-2 text-xs">
+                    {m.recipe?.length > 0 ? m.recipe.map((r, idx) => {
+                      const ing = ingredients.find((i) => i._id === r.ingredientId || i.id === r.ingredientId);
+                      return (
+                        <li key={idx} className="flex justify-between text-muted-foreground">
+                          <span>{ing?.name || 'Unknown'}</span>
+                          <span className="font-medium text-foreground">{r.quantity} {ing?.unit}</span>
+                        </li>
+                      );
+                    }) : (
+                      <p className="py-2 italic text-muted-foreground">No ingredients added.</p>
+                    )}
+                  </ul>
+                  
+                  <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+                    <div className="text-[11px]">
+                      <p className="text-muted-foreground">Plate cost</p>
+                      <p className="font-bold text-primary">₹{rawCost.toFixed(2)}</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => openEditRecipe(m)} className="h-8 text-[11px]">
+                      <FlaskConical className="mr-1 h-3 w-3" /> Edit Recipe
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Recipe Editor Dialog */}
+          <Dialog open={recipeDialogOpen} onOpenChange={setRecipeDialogOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Edit Recipe: {editingRecipeProduct?.name}</DialogTitle>
+                <DialogDescription>Select ingredients and quantities for this dish.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {editingRecipeProduct?.recipe?.map((r, idx) => (
+                  <div key={idx} className="flex items-end gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <Label className="text-xs">Ingredient</Label>
+                      <Select 
+                        value={r.ingredientId} 
+                        onValueChange={v => {
+                          const newRecipe = [...editingRecipeProduct.recipe];
+                          newRecipe[idx].ingredientId = v;
+                          setEditingRecipeProduct({...editingRecipeProduct, recipe: newRecipe});
+                        }}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Select ingredient" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ingredients.map(ing => (
+                            <SelectItem key={ing._id} value={ing._id}>{ing.name} ({ing.unit})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-24 space-y-1.5">
+                      <Label className="text-xs">Qty</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        className="h-9"
+                        value={r.quantity} 
+                        onChange={e => {
+                          const newRecipe = [...editingRecipeProduct.recipe];
+                          newRecipe[idx].quantity = +e.target.value;
+                          setEditingRecipeProduct({...editingRecipeProduct, recipe: newRecipe});
+                        }}
+                      />
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        const newRecipe = editingRecipeProduct.recipe.filter((_, i) => i !== idx);
+                        setEditingRecipeProduct({...editingRecipeProduct, recipe: newRecipe});
+                      }}
+                      className="h-9 w-9 p-0 text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full border-dashed"
+                  onClick={() => {
+                    const newRecipe = [...(editingRecipeProduct?.recipe || []), { ingredientId: "", quantity: 0 }];
+                    setEditingRecipeProduct({...editingRecipeProduct, recipe: newRecipe});
+                  }}
+                >
+                  <Plus className="mr-1 h-4 w-4" /> Add Ingredient
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => recipeMutation.mutate({ 
+                  id: editingRecipeProduct._id || editingRecipeProduct.id, 
+                  recipe: editingRecipeProduct.recipe 
+                })}>
+                  Save Recipe
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

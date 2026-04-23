@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { salesTrend, cancelledItems, orders } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import AxiosAdmin from "@/utils/axiosAdmin";
+import SummaryApi from "@/common/SummerAPI";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -23,6 +25,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,115 +89,130 @@ const PERIOD_CONFIG = {
   },
 };
 
-// Deterministic pseudo-random based on date — same date always returns same KPIs.
-// Backend swap: replace with `GET /api/reports?date=YYYY-MM-DD`.
-const seededValuesForDate = (date) => {
-  const seed =
-    date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
-  const rand = (offset) => {
-    const x = Math.sin(seed + offset) * 10000;
-    return x - Math.floor(x);
-  };
-  const dow = date.getDay();
-  const weekendMul = dow === 0 || dow === 6 ? 1.4 : dow === 5 ? 1.25 : 1;
-  const sales = Math.round((3500 + rand(1) * 6500) * weekendMul);
-  const expenses = Math.round(sales * (0.35 + rand(2) * 0.15));
-  const ords = Math.round((90 + rand(3) * 200) * weekendMul);
-  return { sales, expenses, ords, profit: sales - expenses };
-};
 
-const channelData = [
-  {
-    name: "Dine-In",
-    value: orders.filter((o) => o.type === "dine-in").length || 1,
-    color: "hsl(var(--primary))",
-  },
-  {
-    name: "Takeaway",
-    value: orders.filter((o) => o.type === "takeaway").length || 1,
-    color: "hsl(var(--accent))",
-  },
-  {
-    name: "Delivery",
-    value: orders.filter((o) => o.type === "delivery").length || 1,
-    color: "hsl(var(--secondary))",
-  },
-];
 
 const Reports = () => {
   const [period, setPeriod] = useState("week");
   const [customDate, setCustomDate] = useState(undefined);
 
-  const { kpi, chartData, contextLabel } = useMemo(() => {
-    if (customDate) {
-      const v = seededValuesForDate(customDate);
-      const data = Array.from({ length: 7 }).map((_, i) => {
-        const d = new Date(customDate);
-        d.setDate(d.getDate() - (6 - i));
-        const dv = seededValuesForDate(d);
-        return {
-          day: format(d, "EEE"),
-          sales: dv.sales,
-          expenses: dv.expenses,
-        };
-      });
-      return {
-        kpi: {
-          ...v,
-          deltas: {
-            sales: "Historical",
-            exp: "Historical",
-            profit: "Historical",
-            orders: "Historical",
-          },
-        },
-        chartData: data,
-        contextLabel: `Showing data for ${format(customDate, "PPP")}`,
-      };
+  const { data: realOrders = [] } = useQuery({
+    queryKey: ["orders"],
+    queryFn: async () => {
+      const response = await AxiosAdmin.get(SummaryApi.getOrders.url);
+      return response.data;
+    },
+  });
+
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+
+  const { kpi, chartData, contextLabel, filteredOrders, channelData, cancelledItems, todaySales, todayOrds } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const filtered = realOrders.filter(o => {
+      if (!o.createdAt) return false;
+      const d = new Date(o.createdAt);
+      if (customDate) {
+         const cd = new Date(customDate);
+         cd.setHours(0,0,0,0);
+         const dEnd = new Date(cd);
+         dEnd.setDate(dEnd.getDate() + 1);
+         return d >= cd && d < dEnd;
+      }
+      if (period === "day") {
+         return d >= today;
+      }
+      if (period === "week") {
+         const w = new Date(today);
+         w.setDate(w.getDate() - 7);
+         return d >= w;
+      }
+      if (period === "month") {
+         const m = new Date(today);
+         m.setMonth(m.getMonth() - 1);
+         return d >= m;
+      }
+      return true;
+    });
+
+    const sales = filtered.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    const expenses = sales * 0.35; 
+    const ords = filtered.length;
+    
+    let chartD = [];
+    if (period === 'day' || period === 'week' || customDate) {
+       chartD = Array.from({ length: 7 }).map((_, i) => {
+         const d = new Date();
+         d.setDate(d.getDate() - (6 - i));
+         d.setHours(0, 0, 0, 0);
+         const dEnd = new Date(d);
+         dEnd.setDate(dEnd.getDate() + 1);
+
+         const dayOrders = realOrders.filter(o => {
+           const od = new Date(o.createdAt);
+           return od >= d && od < dEnd;
+         });
+         const daySales = dayOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+         return {
+           day: format(d, "EEE"),
+           sales: daySales,
+           expenses: daySales * 0.35,
+         };
+       });
     }
-    const cfg = PERIOD_CONFIG[period];
-    const sales = Math.round(
-      salesTrend.reduce((s, d) => s + d.sales, 0) * cfg.multiplier,
-    );
-    const expenses = Math.round(
-      salesTrend.reduce((s, d) => s + d.expenses, 0) * cfg.multiplier,
-    );
-    const ords = Math.round(
-      salesTrend.reduce((s, d) => s + d.orders, 0) * cfg.multiplier,
-    );
-    const data =
-      period === "day"
-        ? salesTrend
-            .slice(-1)
-            .map((d) => ({
-              ...d,
-              sales: Math.round(d.sales),
-              expenses: Math.round(d.expenses),
-            }))
-        : period === "month"
-          ? ["W1", "W2", "W3", "W4"].map((w, i) => ({
-              day: w,
-              sales: Math.round(
-                salesTrend.reduce((s, d) => s + d.sales, 0) * (0.9 + i * 0.07),
-              ),
-              expenses: Math.round(
-                salesTrend.reduce((s, d) => s + d.expenses, 0) *
-                  (0.9 + i * 0.05),
-              ),
-            }))
-          : salesTrend;
+
+    const cData = [
+      {
+        name: "Dine-In",
+        value: filtered.filter((o) => o.type === "fine-dine" || o.type === "dine-in").length || 0,
+        color: "hsl(var(--primary))",
+      },
+      {
+        name: "Takeaway",
+        value: filtered.filter((o) => o.type === "qsr" || o.type === "takeaway").length || 0,
+        color: "hsl(var(--accent))",
+      },
+      {
+        name: "Delivery",
+        value: filtered.filter((o) => o.type === "delivery").length || 0,
+        color: "hsl(var(--secondary))",
+      },
+    ].filter(c => c.value > 0);
+    
+    if (cData.length === 0) cData.push({ name: "No Data", value: 1, color: "hsl(var(--muted))" });
+
+    const cItems = filtered
+      .filter(o => o.status === 'cancelled')
+      .map(o => ({
+         id: o._id,
+         item: o.orderNumber,
+         reason: "Order Cancelled",
+         date: format(new Date(o.createdAt), "PPp"),
+         loss: o.totalAmount || 0
+      }));
+
+    const tOrders = realOrders.filter(o => new Date(o.createdAt) >= today);
+    const tSales = tOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+
+    const cfg = customDate ? { label: `Showing data for ${format(customDate, "PPP")}`, deltas: {} } : PERIOD_CONFIG[period];
+
     return {
       kpi: {
         sales,
         expenses,
         ords,
         profit: sales - expenses,
-        deltas: cfg.deltas,
+        deltas: cfg.deltas || { sales: "-", exp: "-", profit: "-", orders: "-" },
       },
-      chartData: data,
+      chartData: chartD,
       contextLabel: cfg.label,
+      filteredOrders: filtered,
+      channelData: cData,
+      cancelledItems: cItems,
+      todaySales: tSales,
+      todayOrds: tOrders.length
     };
-  }, [period, customDate]);
+  }, [period, customDate, realOrders]);
 
   const usingCustom = !!customDate;
 
@@ -265,14 +287,54 @@ const Reports = () => {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
-          label="Total Orders"
-          value={kpi.ords.toLocaleString()}
-          delta={kpi.deltas.orders}
-          up
-          icon={<ShoppingCart className="h-4 w-4" />}
-          tone="primary"
-        />
+        <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
+          <DialogTrigger asChild>
+            <div className="cursor-pointer transition hover:-translate-y-1 hover:shadow-lg">
+              <Kpi
+                label="Total Orders"
+                value={kpi.ords.toLocaleString()}
+                delta={kpi.deltas.orders}
+                up
+                icon={<ShoppingCart className="h-4 w-4" />}
+                tone="primary"
+              />
+            </div>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-primary mb-4">Total Orders ({filteredOrders.length})</h2>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order #</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrders.map(o => (
+                  <TableRow key={o._id}>
+                    <TableCell className="font-semibold text-primary">{o.orderNumber}</TableCell>
+                    <TableCell>{format(new Date(o.createdAt), "PPp")}</TableCell>
+                    <TableCell className="uppercase text-xs">{o.type}</TableCell>
+                    <TableCell className="font-bold">₹{o.totalAmount?.toFixed(2) || 0}</TableCell>
+                    <TableCell>
+                      <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                        {o.status}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredOrders.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">No orders found for this period.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </DialogContent>
+        </Dialog>
         <Kpi
           label="Total Revenue"
           value={`₹${kpi.sales.toLocaleString()}`}
@@ -454,12 +516,12 @@ const Reports = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders
-                    .filter((o) => o.type !== "dine-in")
+                  {filteredOrders
+                    .filter((o) => o.type !== "fine-dine" && o.type !== "dine-in")
                     .map((o) => (
-                      <TableRow key={o.id}>
+                      <TableRow key={o._id}>
                         <TableCell className="font-semibold">
-                          {o.number}
+                          {o.orderNumber}
                         </TableCell>
                         <TableCell>
                           <span className="inline-flex items-center gap-1 text-sm">
@@ -473,7 +535,7 @@ const Reports = () => {
                         </TableCell>
                         <TableCell>{o.customer ?? "—"}</TableCell>
                         <TableCell className="text-right font-semibold">
-                          ₹{o.total.toFixed(2)}
+                          ₹{(o.totalAmount || 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning capitalize">
@@ -482,6 +544,11 @@ const Reports = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                  {filteredOrders.filter((o) => o.type !== "fine-dine" && o.type !== "dine-in").length === 0 && (
+                     <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">No takeaway or delivery orders.</TableCell>
+                     </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -534,11 +601,8 @@ const Reports = () => {
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="mt-3 space-y-2 text-sm">
-                <Row label="Orders" value="186" />
-                <Row label="Gross sales" value="₹7,820" />
-                <Row label="Refunds" value="₹48" />
-                <Row label="Tax collected" value="₹782" />
-                <Row label="Tips" value="₹612" />
+                <Row label="Orders" value={todayOrds.toString()} />
+                <Row label="Gross sales" value={`₹${todaySales.toFixed(2)}`} />
               </div>
               <Button className="mt-4 w-full bg-primary text-primary-foreground">
                 Generate End-of-Day PDF

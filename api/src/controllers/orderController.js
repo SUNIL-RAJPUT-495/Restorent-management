@@ -38,6 +38,8 @@ export const updateOrderStatus = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (order) {
       order.status = req.body.status || order.status;
+      if (req.body.items) order.items = req.body.items;
+      if (req.body.totalAmount) order.totalAmount = req.body.totalAmount;
       const updatedOrder = await order.save();
       res.json(updatedOrder);
     } else {

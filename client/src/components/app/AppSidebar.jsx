@@ -36,20 +36,35 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
 
+  const adminInfo = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("rw_admin_info") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+  const restaurantName = adminInfo.name || "ONEBY";
+  const restaurantLocation = adminInfo.location || "Jaipur, Rajasthan";
+  const restaurantLogo = adminInfo.logo || null;
+
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border bg-primary">
         <div className="flex items-center gap-2.5 px-2 py-2">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-accent text-accent-foreground shadow-soft">
-            <ChefHat className="h-5 w-5" />
-          </span>
+          {restaurantLogo ? (
+            <img src={restaurantLogo} alt="Logo" className="h-9 w-9 rounded-lg object-cover shadow-soft shrink-0 bg-white" />
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-accent text-accent-foreground shadow-soft">
+              <ChefHat className="h-5 w-5" />
+            </span>
+          )}
           {!collapsed && (
             <div className="leading-tight">
-              <p className="text-sm font-bold text-primary-foreground">
-                ONEBY
+              <p className="text-sm font-bold text-primary-foreground uppercase truncate w-32">
+                {restaurantName}
               </p>
-              <p className="text-[11px] text-primary-foreground/70">
-                Jaipur, Rajasthan
+              <p className="text-[11px] text-primary-foreground/70 truncate w-32">
+                {restaurantLocation}
               </p>
             </div>
           )}

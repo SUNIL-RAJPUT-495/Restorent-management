@@ -14,6 +14,13 @@ export const updateTableStatus = async (req, res) => {
     const table = await Table.findOne({ number: req.params.number });
     if (table) {
       table.status = req.body.status || table.status;
+      if (req.body.status === 'occupied') {
+        table.guests = req.body.guests || 0;
+        table.occupiedSince = req.body.occupiedSince || new Date();
+      } else if (req.body.status === 'vacant') {
+        table.guests = 0;
+        table.occupiedSince = null;
+      }
       const updatedTable = await table.save();
       res.json(updatedTable);
     } else {

@@ -49,6 +49,7 @@ const emptyDraft = () => ({
   price: 0,
   cost: 0,
   available: true,
+  image: "",
   recipe: [],
 });
 
@@ -99,13 +100,26 @@ const MenuKDS = () => {
   // Mutate Product
   const productMutation = useMutation({
     mutationFn: async ({ id, data, method }) => {
+      let payload = { ...data };
+      if (payload.image instanceof File) {
+        payload.image = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(payload.image);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        });
+      }
       const api = id ? SummaryApi.updateProduct(id) : SummaryApi.addProduct;
-      const response = await AxiosAdmin[id ? api.method : "post"](api.url, data);
+      const response = await AxiosAdmin[id ? api.method : "post"](api.url, payload);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries(["products"]);
       setDialogOpen(false);
+      toast.success(variables.id ? "Menu item updated" : "Menu item added");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || error.message || "Failed to save item");
     },
   });
 
@@ -128,8 +142,8 @@ const MenuKDS = () => {
     setDialogOpen(true);
   };
   const openEdit = (m) => {
-    setEditingId(m.id);
-    const { id: _id, ...rest } = m;
+    setEditingId(m._id || m.id);
+    const { _id, id, createdAt, updatedAt, __v, ...rest } = m;
     setDraft(rest);
     setDialogOpen(true);
   };
@@ -142,7 +156,6 @@ const MenuKDS = () => {
       id: editingId, 
       data: draft
     });
-    toast.success(editingId ? "Menu item updated" : "Menu item added");
   };
   const deleteItem = async (id) => {
     const api = SummaryApi.deleteProduct(id);
@@ -262,6 +275,28 @@ const MenuKDS = () => {
                       />
                     </div>
                   </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="m-image">Image</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        id="m-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setDraft({ ...draft, image: e.target.files[0] });
+                          }
+                        }}
+                      />
+                      {draft.image && (
+                        <img 
+                          src={draft.image instanceof File ? URL.createObjectURL(draft.image) : draft.image} 
+                          alt="Preview" 
+                          className="h-10 w-10 object-cover rounded-md border"
+                        />
+                      )}
+                    </div>
+                  </div>
                   <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                     <Label htmlFor="m-avail" className="cursor-pointer">
                       Available
@@ -296,6 +331,7 @@ const MenuKDS = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">Image</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Price</TableHead>
@@ -307,6 +343,15 @@ const MenuKDS = () => {
               <TableBody>
                 {items.map((m) => (
                   <TableRow key={m._id}>
+                    <TableCell>
+                      {m.image ? (
+                        <img src={m.image} alt={m.name} className="h-10 w-10 object-cover rounded-md border" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
+                          <ChefHat className="h-5 w-5 text-muted-foreground opacity-50" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-semibold text-primary">
                       {m.name}
                     </TableCell>

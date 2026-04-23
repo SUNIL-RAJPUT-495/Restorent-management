@@ -5,6 +5,7 @@ import SummaryApi from "@/common/SummerAPI";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -70,7 +71,16 @@ const Settings = () => {
   // Update Profile
   const updateProfileMutation = useMutation({
     mutationFn: async (data) => {
-      const response = await AxiosAdmin.put(SummaryApi.updateProfile.url, data);
+      let payload = { ...data };
+      if (payload.logo instanceof File) {
+        payload.logo = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(payload.logo);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        });
+      }
+      const response = await AxiosAdmin.put(SummaryApi.updateProfile.url, payload);
       return response.data;
     },
     onSuccess: (data) => {
@@ -117,7 +127,13 @@ const Settings = () => {
 
   // Initialize profile form when data loads
   useEffect(() => {
-    if (profile) setProfileData({ name: profile.name, email: profile.email });
+    if (profile) setProfileData({ 
+      name: profile.name || "", 
+      email: profile.email || "", 
+      location: profile.location || "", 
+      description: profile.description || "", 
+      logo: profile.logo || "" 
+    });
   }, [profile]);
 
   const handleLogout = () => {
@@ -142,7 +158,11 @@ const Settings = () => {
             <TabsTrigger value="team" className="gap-2 px-4 py-2">
               <Users className="h-4 w-4" /> Team Management
             </TabsTrigger>
+
           )}
+          <TabsTrigger value="website" className="gap-2 px-4 py-2">
+            <User className="h-4 w-4" /> Website Settings
+          </TabsTrigger>
         </TabsList>
 
         {/* --- Profile Tab --- */}
@@ -327,7 +347,70 @@ const Settings = () => {
               </div>
             </div>
           </TabsContent>
+
         )}
+         {/* --- Profile Tab --- */}
+        <TabsContent value="website">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div className="grid gap-4 max-w-md">
+              <div className="space-y-1.5">
+                <Label>Restaurant Name</Label>
+                <Input 
+                  value={profileData.name} 
+                  onChange={(e) => setProfileData({...profileData, name: e.target.value})} 
+                />
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label>Restaurant Location</Label>
+                <Input 
+                  value={profileData.location} 
+                  onChange={(e) => setProfileData({...profileData, location: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Restaurant Description</Label>
+                <Textarea 
+                  value={profileData.description} 
+                  onChange={(e) => setProfileData({...profileData, description: e.target.value})} 
+                  rows={5}
+                />
+              </div>
+               <div className="space-y-1.5">
+                <Label>Restaurant Logo</Label>
+                <Input 
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setProfileData({...profileData, logo: e.target.files[0]});
+                    }
+                  }} 
+                />
+                {profileData.logo && (
+                  <img 
+                    src={profileData.logo instanceof File ? URL.createObjectURL(profileData.logo) : profileData.logo} 
+                    alt="Preview" 
+                    className="h-20 w-20 object-cover rounded-lg"
+                  />
+                )}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  onClick={() => updateProfileMutation.mutate(profileData)}
+                  disabled={updateProfileMutation.isPending}
+                  className="bg-primary text-primary-foreground"
+                >
+                  {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={handleLogout} className="text-destructive">
+                  <LogOut className="h-4 w-4 mr-2" /> Sign Out
+                </Button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -9,35 +9,30 @@ import authRoutes from './src/routes/authRoutes.js';
 import productRoutes from './src/routes/productRoutes.js';
 import orderRoutes from './src/routes/orderRoutes.js';
 import tableRoutes from './src/routes/tableRoutes.js';
+import ingredientRoutes from './src/routes/ingredientRoutes.js';
 
-// .env file ko load karne ke liye
 dotenv.config();
 
-// Database connection
 connectDB();
 
 const app = express();
-
-// Middlewares
 app.use(cors({
   origin: ["http://localhost:5173","http://localhost:8080", "https://restorent-management-eight.vercel.app", "https://restorent-management-g7de.vercel.app"],
   credentials: true
 }));
-app.use(express.json()); // JSON data read karne ke liye
-app.use(morgan('dev')); // Logging
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(morgan('dev'));
 
-// Routes
 app.use('/api/admin', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/tables', tableRoutes);
+app.use('/api/ingredients', ingredientRoutes);
 
-// Pehli API (Testing ke liye)
 app.get('/', (req, res) => {
   res.send('Restaurant Management API is running');
 });
-
-// Server Start karna
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running in ${process.env.NODE_ENV} mode on port ${PORT}`);

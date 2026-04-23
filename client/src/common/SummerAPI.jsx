@@ -27,6 +27,12 @@ const SummaryApi = {
     getTables:      { url: baseURL + "/api/tables",         method: "get"  },
     addTable:       { url: baseURL + "/api/tables",         method: "post" },
     updateTable: (number) => ({ url: baseURL + `/api/tables/${number}`, method: "put" }),
+    
+    // Ingredients
+    getIngredients: { url: baseURL + "/api/ingredients", method: "get" },
+    addIngredient:  { url: baseURL + "/api/ingredients/add", method: "post" },
+    updateIngredient: (id) => ({ url: baseURL + `/api/ingredients/${id}`, method: "put" }),
+    deleteIngredient: (id) => ({ url: baseURL + `/api/ingredients/${id}`, method: "delete" }),
 }
 
 export default SummaryApi

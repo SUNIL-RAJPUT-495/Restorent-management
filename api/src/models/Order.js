@@ -28,7 +28,7 @@ const orderSchema = new mongoose.Schema({
   }],
   status: {
     type: String,
-    enum: ['new', 'preparing', 'ready', 'delivered', 'cancelled'],
+    enum: ['new', 'preparing', 'ready', 'delivered', 'completed', 'cancelled'],
     default: 'new',
   },
   totalAmount: {

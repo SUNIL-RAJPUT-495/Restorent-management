@@ -25,8 +25,14 @@ const productSchema = new mongoose.Schema({
     default: true,
   },
   recipe: [{
-    ingredient: String,
-    quantity: String,
+    ingredientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Ingredient',
+    },
+    quantity: {
+      type: Number,
+      required: true,
+    },
   }],
 }, {
   timestamps: true,

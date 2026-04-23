@@ -15,6 +15,13 @@ const tableSchema = new mongoose.Schema({
     type: Number,
     default: 4,
   },
+  guests: {
+    type: Number,
+    default: 0,
+  },
+  occupiedSince: {
+    type: Date,
+  },
 }, {
   timestamps: true,
 });
