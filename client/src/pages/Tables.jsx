@@ -635,7 +635,7 @@ const Tables = () => {
                       <span>GRAND TOTAL</span>
                       <span>₹{grandTotal.toFixed(2)}</span>
                     </div>
-                    <p className="mt-3 text-[10px] text-muted-foreground">Thank you for dining with us!</p>
+                    <p className="mt-3 text-[10px] text-muted-foreground">Good food, good times. Thanks for choosing us!</p>
                   </div>
                 </div>
 
