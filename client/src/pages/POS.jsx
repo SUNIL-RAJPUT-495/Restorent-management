@@ -196,6 +196,19 @@ const POS = () => {
   const placeOrder = () => {
     if (!cart.length) return;
 
+    if (mode === "fine-dine") {
+      if (!tableNo) {
+        toast.error("Please select a table first!");
+        setTablePickerOpen(true);
+        return;
+      }
+      const targetTable = tables.find(t => String(t.number) === String(tableNo));
+      if (targetTable?.status === 'occupied' && !activeOrder) {
+        toast.error("This table is already occupied. Choose another table.");
+        return;
+      }
+    }
+
     if (activeOrder) {
       const itemsToSubmit = activeOrder.items ? activeOrder.items.map(i => ({
         productId: i.productId?._id || i.productId,
@@ -367,6 +380,11 @@ const POS = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-3 gap-3 py-4 sm:grid-cols-4">
+                  {tables.length > 0 && tables.every(t => t.status === 'occupied') && (
+                    <div className="col-span-full mb-2 rounded-lg bg-destructive/10 p-3 text-center text-sm font-bold text-destructive animate-pulse">
+                      ⚠️ All tables are full! Please wait some time.
+                    </div>
+                  )}
                   {Array.isArray(tables) && tables.map((t) => {
                     const activeOrder = Array.isArray(orders) ? orders.find(o =>
                       o.tableNumber === String(t.number) &&
@@ -379,12 +397,21 @@ const POS = () => {
                       <button
                         key={t._id}
                         onClick={() => {
+                          if (t.status === 'occupied') {
+                            toast.error(`Table ${t.number} is occupied! All tables are full? Please wait.`);
+                            return;
+                          }
                           setTableNo(String(t.number));
                           setTablePickerOpen(false);
                           setSearchParams({ table: String(t.number) });
                         }}
-                        className={`relative rounded-xl border-2 p-3 text-left transition hover:border-accent ${isSelected ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-border"
-                          } ${t.status === 'occupied' ? 'bg-destructive/5 border-destructive/20' : ''}`}
+                        className={`relative rounded-xl border-2 p-3 text-left transition ${
+                          t.status === 'occupied' 
+                            ? "border-destructive/20 bg-destructive/5 cursor-not-allowed" 
+                            : isSelected 
+                              ? "border-accent bg-accent/5 ring-2 ring-accent/20" 
+                              : "border-border hover:border-accent"
+                        }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold">T-{t.number}</span>
@@ -537,14 +564,19 @@ const POS = () => {
 
           <Button
             onClick={placeOrder}
-            disabled={!cart.length || orderMutation.isPending || (mode === "fine-dine" && !tableNo)}
-            className="h-12 w-full bg-gradient-accent text-base font-bold text-accent-foreground shadow-glow hover:opacity-95"
+            disabled={!cart.length || orderMutation.isPending || updateOrderMutation.isPending || (mode === "fine-dine" && !tableNo)}
+            className="h-12 w-full bg-gradient-accent text-base font-bold text-accent-foreground shadow-glow hover:opacity-95 disabled:opacity-50"
           >
-            {orderMutation.isPending 
-              ? "Placing..." 
-              : mode === "fine-dine" 
-                ? (tableNo ? "Send to Kitchen" : "Select a Table") 
-                : `Charge ₹${total.toFixed(2)}`}
+            {orderMutation.isPending || updateOrderMutation.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <>
+                <Receipt className="mr-2 h-5 w-5" />
+                {mode === "fine-dine" 
+                  ? (activeOrder ? "Update Kitchen Order" : "Send to Kitchen") 
+                  : `Pay ₹${total.toFixed(2)}`}
+              </>
+            )}
           </Button>
         </div>
       </aside>
