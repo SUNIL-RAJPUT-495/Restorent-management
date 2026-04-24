@@ -17,7 +17,7 @@ connectDB();
 
 const app = express();
 app.use(cors({
-  origin: ["http://localhost:5173","http://localhost:8080", "https://restorent-management-eight.vercel.app", "https://restorent-management-g7de.vercel.app"],
+  origin: ["http://localhost:5173","https://restorent-management-eight.vercel.app"],
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
