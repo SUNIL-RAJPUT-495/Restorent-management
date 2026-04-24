@@ -32,7 +32,6 @@ import {
 import { Label } from "@/components/ui/label";
 
 
-const TAX_RATE = 0.1;
 const categories = ["All", "Starters", "Main Course", "Drinks", "Desserts"];
 
 const POS = () => {
@@ -47,11 +46,17 @@ const POS = () => {
   const [tableNo, setTableNo] = useState("");
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
 
+  const [guests, setGuests] = useState(1);
+
   useEffect(() => {
     const t = searchParams.get("table");
+    const g = searchParams.get("guests");
     if (t && t !== tableNo) {
       setTableNo(t);
       setMode("fine-dine");
+    }
+    if (g) {
+      setGuests(Number(g));
     }
   }, [searchParams, tableNo]);
 
@@ -73,15 +78,27 @@ const POS = () => {
     },
   });
 
+  // Fetch restaurant settings for taxes
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const response = await AxiosAdmin.get(SummaryApi.getSettings.url);
+      return response.data;
+    },
+  });
+
   const orders = useMemo(() => Array.isArray(ordersData) ? ordersData : [], [ordersData]);
 
   const activeOrder = useMemo(() => {
     if (!tableNo || mode !== "fine-dine" || !orders.length) return null;
-    return orders.find(o => 
-      o.tableNumber === String(tableNo) && 
+    const table = tables.find(t => String(t.number) === String(tableNo));
+    if (!table || table.status === 'vacant' || table.status === 'free') return null;
+    
+    return orders.find(o =>
+      o.tableNumber === String(tableNo) &&
       ['new', 'preparing', 'ready', 'delivered'].includes(o.status)
     );
-  }, [tableNo, mode, orders]);
+  }, [tableNo, mode, orders, tables]);
 
 
   // Fetch Menu Items
@@ -105,6 +122,8 @@ const POS = () => {
       });
       setCart([]);
       queryClient.invalidateQueries(["orders"]);
+      queryClient.invalidateQueries(["tables"]);
+      
       if (mode === "fine-dine") {
         navigate("/tables");
       }
@@ -126,6 +145,7 @@ const POS = () => {
       });
       setCart([]);
       queryClient.invalidateQueries(["orders"]);
+      queryClient.invalidateQueries(["tables"]);
       if (mode === "fine-dine") {
         navigate("/tables");
       }
@@ -169,12 +189,13 @@ const POS = () => {
   const removeLine = (id) => setCart((c) => c.filter((l) => l.id !== id));
 
   const subtotal = cart.reduce((s, l) => s + l.price * l.qty, 0);
-  const tax = +(subtotal * TAX_RATE).toFixed(2);
-  const total = +(subtotal + tax).toFixed(2);
+  const cgst = +(subtotal * (settings?.cgst ?? 2.5) / 100).toFixed(2);
+  const sgst = +(subtotal * (settings?.sgst ?? 2.5) / 100).toFixed(2);
+  const total = +(subtotal + cgst + sgst).toFixed(2);
 
   const placeOrder = () => {
     if (!cart.length) return;
-    
+
     if (activeOrder) {
       const itemsToSubmit = activeOrder.items ? activeOrder.items.map(i => ({
         productId: i.productId?._id || i.productId,
@@ -182,21 +203,21 @@ const POS = () => {
         price: i.price,
         qty: i.qty
       })) : [];
-      
+
       cart.forEach(cartItem => {
-         const existing = itemsToSubmit.find(i => (i.productId && i.productId === cartItem.id) || (i.name === cartItem.name));
-         if (existing) {
-             existing.qty += cartItem.qty;
-         } else {
-             itemsToSubmit.push({
-               productId: cartItem.id,
-               name: cartItem.name,
-               price: cartItem.price,
-               qty: cartItem.qty
-             });
-         }
+        const existing = itemsToSubmit.find(i => (i.productId && i.productId === cartItem.id) || (i.name === cartItem.name));
+        if (existing) {
+          existing.qty += cartItem.qty;
+        } else {
+          itemsToSubmit.push({
+            productId: cartItem.id,
+            name: cartItem.name,
+            price: cartItem.price,
+            qty: cartItem.qty
+          });
+        }
       });
-      
+
       updateOrderMutation.mutate({
         id: activeOrder._id,
         orderData: {
@@ -215,6 +236,7 @@ const POS = () => {
         })),
         type: mode,
         tableNumber: mode === "fine-dine" ? tableNo : undefined,
+        guests: mode === "fine-dine" ? guests : undefined,
         totalAmount: total,
         paymentMethod: payment,
       };
@@ -240,21 +262,19 @@ const POS = () => {
           <div className="inline-flex rounded-lg border border-border bg-muted p-1">
             <button
               onClick={() => setMode("qsr")}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                mode === "qsr"
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${mode === "qsr"
                   ? "bg-gradient-accent text-accent-foreground shadow-soft"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <Zap className="h-3.5 w-3.5" /> QSR
             </button>
             <button
               onClick={() => setMode("fine-dine")}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                mode === "fine-dine"
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${mode === "fine-dine"
                   ? "bg-gradient-teal text-secondary-foreground shadow-soft"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <Utensils className="h-3.5 w-3.5" /> Fine-Dine
             </button>
@@ -319,13 +339,26 @@ const POS = () => {
             <p className="text-lg font-bold">#{1048}</p>
           </div>
           {mode === "fine-dine" ? (
-            <Dialog open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="h-9 gap-2 border-white/30 bg-white/10 text-white hover:bg-white/20">
-                  <Utensils className="h-4 w-4" />
-                  {tableNo ? `Table ${tableNo}` : "Table Select"}
-                </Button>
-              </DialogTrigger>
+            <div className="flex items-center gap-2">
+              {tableNo && (
+                <div className="flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-2 text-white h-9 transition-all">
+                  <Users className="h-4 w-4 opacity-80" />
+                  <Input
+                    type="number"
+                    min="1"
+                    value={guests}
+                    onChange={(e) => setGuests(e.target.value)}
+                    className="w-10 bg-transparent p-0 text-center text-sm font-bold border-0 focus-visible:ring-0 h-full placeholder:text-white/50"
+                  />
+                </div>
+              )}
+              <Dialog open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="h-9 gap-2 border-white/30 bg-white/10 text-white hover:bg-white/20">
+                    <Utensils className="h-4 w-4" />
+                    {tableNo ? `Table ${tableNo}` : "Table Select"}
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Select Table</DialogTitle>
@@ -335,8 +368,8 @@ const POS = () => {
                 </DialogHeader>
                 <div className="grid grid-cols-3 gap-3 py-4 sm:grid-cols-4">
                   {Array.isArray(tables) && tables.map((t) => {
-                    const activeOrder = Array.isArray(orders) ? orders.find(o => 
-                      o.tableNumber === String(t.number) && 
+                    const activeOrder = Array.isArray(orders) ? orders.find(o =>
+                      o.tableNumber === String(t.number) &&
                       ['new', 'preparing', 'ready', 'delivered'].includes(o.status) &&
                       t.status !== 'vacant' && t.status !== 'free'
                     ) : null;
@@ -350,9 +383,8 @@ const POS = () => {
                           setTablePickerOpen(false);
                           setSearchParams({ table: String(t.number) });
                         }}
-                        className={`relative rounded-xl border-2 p-3 text-left transition hover:border-accent ${
-                          isSelected ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-border"
-                        } ${t.status === 'occupied' ? 'bg-destructive/5 border-destructive/20' : ''}`}
+                        className={`relative rounded-xl border-2 p-3 text-left transition hover:border-accent ${isSelected ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-border"
+                          } ${t.status === 'occupied' ? 'bg-destructive/5 border-destructive/20' : ''}`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold">T-{t.number}</span>
@@ -376,6 +408,7 @@ const POS = () => {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           ) : (
             <span className="rounded-md bg-accent/90 px-2.5 py-1 text-xs font-bold">
               QSR · TAKEAWAY
@@ -462,16 +495,21 @@ const POS = () => {
 
         <div className="space-y-3 border-t border-border p-4">
           <div className="space-y-1 text-sm">
-            <Row label="Subtotal" value={`₹${subtotal.toFixed(2)}`} />
-            <Row
-              label={`Tax (${(TAX_RATE * 100).toFixed(0)}%)`}
-              value={`₹${tax.toFixed(2)}`}
-            />
-            <div className="flex justify-between border-t border-border pt-2 text-base">
-              <span className="font-bold text-primary">Total</span>
-              <span className="font-extrabold text-accent">
-                ₹{total.toFixed(2)}
-              </span>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal</span>
+              <span>₹{subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>CGST ({settings?.cgst ?? 2.5}%)</span>
+              <span>₹{cgst.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>SGST ({settings?.sgst ?? 2.5}%)</span>
+              <span>₹{sgst.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between pt-2 text-xl font-black text-primary">
+              <span>Total</span>
+              <span>₹{total.toFixed(2)}</span>
             </div>
           </div>
 
@@ -485,11 +523,10 @@ const POS = () => {
                 <button
                   key={p}
                   onClick={() => setPayment(p)}
-                  className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2 text-xs font-semibold transition ${
-                    payment === p
+                  className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2 text-xs font-semibold transition ${payment === p
                       ? "border-accent bg-accent-soft text-accent"
                       : "border-border bg-background text-muted-foreground hover:border-accent/40"
-                  }`}
+                    }`}
                 >
                   <Icon className="h-4 w-4" />
                   {label}
@@ -500,10 +537,14 @@ const POS = () => {
 
           <Button
             onClick={placeOrder}
-            disabled={!cart.length || orderMutation.isPending}
+            disabled={!cart.length || orderMutation.isPending || (mode === "fine-dine" && !tableNo)}
             className="h-12 w-full bg-gradient-accent text-base font-bold text-accent-foreground shadow-glow hover:opacity-95"
           >
-            {orderMutation.isPending ? "Placing..." : (mode === "fine-dine" ? "Send to Kitchen" : `Charge ₹${total.toFixed(2)}`)}
+            {orderMutation.isPending 
+              ? "Placing..." 
+              : mode === "fine-dine" 
+                ? (tableNo ? "Send to Kitchen" : "Select a Table") 
+                : `Charge ₹${total.toFixed(2)}`}
           </Button>
         </div>
       </aside>

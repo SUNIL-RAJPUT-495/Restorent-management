@@ -66,6 +66,15 @@ const Settings = () => {
     enabled: isAdmin,
   });
 
+  // 3. Website & Bill Settings
+  const { data: settings, isLoading: loadingSettings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const response = await AxiosAdmin.get(SummaryApi.getSettings.url);
+      return response.data;
+    },
+  });
+
   // --- Mutations ---
 
   // Update Profile
@@ -119,9 +128,41 @@ const Settings = () => {
     },
   });
 
+  // Update Settings (Website & Bill)
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data) => {
+      let payload = { ...data };
+      if (payload.logo instanceof File) {
+        payload.logo = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(payload.logo);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        });
+      }
+      const response = await AxiosAdmin.put(SummaryApi.updateSettings.url, payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Settings updated!");
+      queryClient.invalidateQueries(["settings"]);
+    },
+  });
+
   // --- Form States ---
   const [passData, setPassData] = useState({ currentPassword: "", newPassword: "" });
   const [profileData, setProfileData] = useState({ name: "", email: "" });
+  const [settingsData, setSettingsData] = useState({ 
+    restaurantName: "", 
+    location: "", 
+    description: "", 
+    logo: "",
+    phone: "",
+    gstNo: "",
+    fssaiNo: "",
+    cgst: 2.5,
+    sgst: 2.5,
+  });
   const [newStaff, setNewStaff] = useState({ name: "", email: "", password: "", role: "cashier" });
   const [addStaffOpen, setAddStaffOpen] = useState(false);
 
@@ -130,11 +171,23 @@ const Settings = () => {
     if (profile) setProfileData({ 
       name: profile.name || "", 
       email: profile.email || "", 
-      location: profile.location || "", 
-      description: profile.description || "", 
-      logo: profile.logo || "" 
     });
   }, [profile]);
+
+  // Initialize settings form when data loads
+  useEffect(() => {
+    if (settings) setSettingsData({ 
+      restaurantName: settings.restaurantName || "", 
+      location: settings.location || "", 
+      description: settings.description || "", 
+      logo: settings.logo || "",
+      phone: settings.phone || "",
+      gstNo: settings.gstNo || "",
+      fssaiNo: settings.fssaiNo || "",
+      cgst: settings.cgst ?? 2.5,
+      sgst: settings.sgst ?? 2.5,
+    });
+  }, [settings]);
 
   const handleLogout = () => {
     localStorage.removeItem("resto_auth_token");
@@ -142,7 +195,7 @@ const Settings = () => {
     window.location.reload();
   };
 
-  if (loadingProfile) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-accent" /></div>;
+  if (loadingProfile || loadingSettings) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-accent" /></div>;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -162,6 +215,9 @@ const Settings = () => {
           )}
           <TabsTrigger value="website" className="gap-2 px-4 py-2">
             <User className="h-4 w-4" /> Website Settings
+          </TabsTrigger>
+          <TabsTrigger value="bill" className="gap-2 px-4 py-2">
+            <User className="h-4 w-4" /> Bill Settings
           </TabsTrigger>
         </TabsList>
 
@@ -356,56 +412,127 @@ const Settings = () => {
               <div className="space-y-1.5">
                 <Label>Restaurant Name</Label>
                 <Input 
-                  value={profileData.name} 
-                  onChange={(e) => setProfileData({...profileData, name: e.target.value})} 
+                  value={settingsData.restaurantName} 
+                  onChange={(e) => setSettingsData({...settingsData, restaurantName: e.target.value})} 
                 />
               </div>
               
               <div className="space-y-1.5">
                 <Label>Restaurant Location</Label>
                 <Input 
-                  value={profileData.location} 
-                  onChange={(e) => setProfileData({...profileData, location: e.target.value})} 
+                  value={settingsData.location} 
+                  onChange={(e) => setSettingsData({...settingsData, location: e.target.value})} 
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>Restaurant Description</Label>
                 <Textarea 
-                  value={profileData.description} 
-                  onChange={(e) => setProfileData({...profileData, description: e.target.value})} 
+                  value={settingsData.description} 
+                  onChange={(e) => setSettingsData({...settingsData, description: e.target.value})} 
                   rows={5}
                 />
               </div>
-               <div className="space-y-1.5">
+              <div className="space-y-1.5">
                 <Label>Restaurant Logo</Label>
                 <Input 
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
-                      setProfileData({...profileData, logo: e.target.files[0]});
+                      setSettingsData({...settingsData, logo: e.target.files[0]});
                     }
                   }} 
                 />
-                {profileData.logo && (
+                {settingsData.logo && (
                   <img 
-                    src={profileData.logo instanceof File ? URL.createObjectURL(profileData.logo) : profileData.logo} 
+                    src={settingsData.logo instanceof File ? URL.createObjectURL(settingsData.logo) : settingsData.logo} 
                     alt="Preview" 
                     className="h-20 w-20 object-cover rounded-lg"
                   />
                 )}
               </div>
+              <div className="space-y-1.5">
+                <Label>Mobile / Phone No.</Label>
+                <Input 
+                  placeholder="e.g. +91 98765 43210"
+                  value={settingsData.phone} 
+                  onChange={(e) => setSettingsData({...settingsData, phone: e.target.value})} 
+                />
+              </div>
+              
               <div className="flex gap-2 pt-2">
                 <Button 
-                  onClick={() => updateProfileMutation.mutate(profileData)}
-                  disabled={updateProfileMutation.isPending}
+                  onClick={() => updateSettingsMutation.mutate(settingsData)}
+                  disabled={updateSettingsMutation.isPending}
                   className="bg-primary text-primary-foreground"
                 >
-                  {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  {updateSettingsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                   Save Changes
                 </Button>
-                <Button variant="outline" onClick={handleLogout} className="text-destructive">
-                  <LogOut className="h-4 w-4 mr-2" /> Sign Out
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="bill">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <h3 className="text-lg font-bold text-primary mb-1 flex items-center gap-2">
+              <Save className="h-5 w-5 text-accent" /> Bill & Tax Settings
+            </h3>
+            <p className="text-xs text-muted-foreground mb-5">These details will appear on every generated receipt/bill.</p>
+            <div className="grid gap-4 max-w-md">
+              <div className="space-y-1.5">
+                <Label>GST Number (GSTIN)</Label>
+                <Input 
+                  placeholder="e.g. 22AAAAA0000A1Z5"
+                  value={settingsData.gstNo} 
+                  onChange={(e) => setSettingsData({...settingsData, gstNo: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>FSSAI License No.</Label>
+                <Input 
+                  placeholder="e.g. 10012345000123"
+                  value={settingsData.fssaiNo} 
+                  onChange={(e) => setSettingsData({...settingsData, fssaiNo: e.target.value})} 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>CGST (%)</Label>
+                  <div className="flex items-center gap-1">
+                    <Input 
+                      type="number"
+                      min="0" max="50" step="0.5"
+                      placeholder="e.g. 2.5"
+                      value={settingsData.cgst} 
+                      onChange={(e) => setSettingsData({...settingsData, cgst: parseFloat(e.target.value) || 0})} 
+                    />
+                    <span className="text-sm font-bold text-muted-foreground">%</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>SGST (%)</Label>
+                  <div className="flex items-center gap-1">
+                    <Input 
+                      type="number"
+                      min="0" max="50" step="0.5"
+                      placeholder="e.g. 2.5"
+                      value={settingsData.sgst} 
+                      onChange={(e) => setSettingsData({...settingsData, sgst: parseFloat(e.target.value) || 0})} 
+                    />
+                    <span className="text-sm font-bold text-muted-foreground">%</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground -mt-1">CGST + SGST = Total GST charged on bills. Default is 2.5% + 2.5% = 5%.</p>
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  onClick={() => updateSettingsMutation.mutate(settingsData)}
+                  disabled={updateSettingsMutation.isPending}
+                  className="bg-primary text-primary-foreground"
+                >
+                  {updateSettingsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save Bill Settings
                 </Button>
               </div>
             </div>

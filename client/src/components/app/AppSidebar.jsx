@@ -21,6 +21,9 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useQuery } from "@tanstack/react-query";
+import AxiosAdmin from "@/utils/axiosAdmin";
+import SummaryApi from "@/common/SummerAPI";
 
 const items = [
   { title: "POS / Billing", url: "/", icon: LayoutDashboard },
@@ -43,9 +46,17 @@ export function AppSidebar() {
       return {};
     }
   })();
-  const restaurantName = adminInfo.name || "ONEBY";
-  const restaurantLocation = adminInfo.location || "Jaipur, Rajasthan";
-  const restaurantLogo = adminInfo.logo || null;
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const response = await AxiosAdmin.get(SummaryApi.getSettings.url);
+      return response.data;
+    },
+  });
+
+  const restaurantName = settings?.restaurantName || "RestoOS";
+  const restaurantLocation = settings?.location || "Jaipur, Rajasthan";
+  const restaurantLogo = settings?.logo || null;
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">

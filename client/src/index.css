@@ -138,4 +138,13 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Hide scrollbar inside all dialogs/modals */
+  [role="dialog"] ::-webkit-scrollbar {
+    display: none;
+  }
+  [role="dialog"] * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

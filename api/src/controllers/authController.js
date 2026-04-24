@@ -77,9 +77,6 @@ export const getProfile = async (req, res) => {
         name: admin.name,
         email: admin.email,
         role: admin.role,
-        location: admin.location,
-        description: admin.description,
-        logo: admin.logo,
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -97,9 +94,6 @@ export const updateProfile = async (req, res) => {
     if (admin) {
       admin.name = req.body.name || admin.name;
       admin.email = req.body.email || admin.email;
-      if (req.body.location !== undefined) admin.location = req.body.location;
-      if (req.body.description !== undefined) admin.description = req.body.description;
-      if (req.body.logo !== undefined) admin.logo = req.body.logo;
 
       const updatedAdmin = await admin.save();
       res.json({
@@ -108,9 +102,6 @@ export const updateProfile = async (req, res) => {
         name: updatedAdmin.name,
         email: updatedAdmin.email,
         role: updatedAdmin.role,
-        location: updatedAdmin.location,
-        description: updatedAdmin.description,
-        logo: updatedAdmin.logo,
       });
     } else {
       res.status(404).json({ message: 'User not found' });

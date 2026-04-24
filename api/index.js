@@ -10,6 +10,7 @@ import productRoutes from './src/routes/productRoutes.js';
 import orderRoutes from './src/routes/orderRoutes.js';
 import tableRoutes from './src/routes/tableRoutes.js';
 import ingredientRoutes from './src/routes/ingredientRoutes.js';
+import settingRoutes from './src/routes/settingRoutes.js';
 
 dotenv.config();
 
@@ -17,7 +18,7 @@ connectDB();
 
 const app = express();
 app.use(cors({
-  origin: ["http://localhost:5173","https://restorent-management-eight.vercel.app"],
+  origin: ["http://localhost:8080","https://restorent-management-eight.vercel.app"],
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -29,11 +30,20 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/ingredients', ingredientRoutes);
+app.use('/api/settings', settingRoutes);
 
 app.get('/', (req, res) => {
   res.send('Restaurant Management API is running');
 });
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    process.exit(1);
+  } else {
+    throw err;
+  }
 });

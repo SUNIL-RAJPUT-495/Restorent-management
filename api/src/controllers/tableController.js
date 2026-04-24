@@ -13,6 +13,8 @@ export const updateTableStatus = async (req, res) => {
   try {
     const table = await Table.findOne({ number: req.params.number });
     if (table) {
+      if (req.body.number) table.number = req.body.number;
+      if (req.body.capacity) table.capacity = req.body.capacity;
       table.status = req.body.status || table.status;
       if (req.body.status === 'occupied') {
         table.guests = req.body.guests || 0;
@@ -36,6 +38,19 @@ export const addTable = async (req, res) => {
     const table = new Table(req.body);
     const createdTable = await table.save();
     res.status(201).json(createdTable);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const deleteTable = async (req, res) => {
+  try {
+    const result = await Table.findOneAndDelete({ number: req.params.number });
+    if (result) {
+      res.json({ message: 'Table removed' });
+    } else {
+      res.status(404).json({ message: 'Table not found' });
+    }
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

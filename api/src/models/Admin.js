@@ -19,18 +19,6 @@ const adminSchema = new mongoose.Schema({
     enum: ['admin', 'manager', 'cashier'],
     default: 'admin',
   },
-  location: {
-    type: String,
-    default: '',
-  },
-  description: {
-    type: String,
-    default: '',
-  },
-  logo: {
-    type: String,
-    default: '',
-  }
 }, {
   timestamps: true,
 });
