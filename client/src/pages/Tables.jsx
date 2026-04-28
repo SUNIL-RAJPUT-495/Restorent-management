@@ -644,9 +644,10 @@ const Tables = () => {
                   <Button variant="outline" onClick={() => setBillData(null)} className="flex-1">
                     Cancel
                   </Button>
-                  <Button className="bg-success text-success-foreground flex-1" onClick={finalizeBill}>
-                    Complete Payment
+                   <Button className="bg-primary text-primary-foreground flex-1" onClick={() => window.print()}>
+                    Print Receipt
                   </Button>
+                  
                 </DialogFooter>
               </>
             );
