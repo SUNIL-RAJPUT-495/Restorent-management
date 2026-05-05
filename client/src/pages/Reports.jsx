@@ -427,24 +427,7 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-            <h3 className="mb-3 text-base font-bold text-primary">
-              Customer Behavior
-            </h3>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Behavior
-                label="Avg. ticket size"
-                value="₹42.10"
-                sub="+6.2% vs last week"
-              />
-              <Behavior label="Repeat customers" value="38%" sub="+4 pts MoM" />
-              <Behavior
-                label="Avg. visit duration"
-                value="48 min"
-                sub="Dine-in only"
-              />
-            </div>
-          </div>
+         
         </TabsContent>
 
         <TabsContent value="channels" className="mt-4">
