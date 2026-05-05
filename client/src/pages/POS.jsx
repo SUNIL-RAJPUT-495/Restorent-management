@@ -211,10 +211,6 @@ const POS = () => {
         return;
       }
       const targetTable = tables.find(t => String(t.number) === String(tableNo));
-      if (targetTable?.status === 'occupied' && !activeOrder) {
-        toast.error("This table is already occupied. Choose another table.");
-        return;
-      }
     }
 
     if (activeOrder) {

@@ -1,16 +1,13 @@
 export const baseURL = import.meta.env.VITE_API_URL || "https://restorent-management-g7de.vercel.app";
 
 const SummaryApi = {
-    // Admin & Auth
-    adminLogin: { url: baseURL + "/api/admin/login", method: "post" },
-    adminSeed:  { url: baseURL + "/api/admin/seed",  method: "post" },
-    getProfile: { url: baseURL + "/api/admin/profile", method: "get" },
-    updateProfile: { url: baseURL + "/api/admin/profile", method: "put" },
-    changePassword: { url: baseURL + "/api/admin/change-password", method: "put" },
+   //app
 
-    // Staff Management
-    getStaff: { url: baseURL + "/api/admin/staff", method: "get" },
-    registerStaff: { url: baseURL + "/api/admin/register-staff", method: "post" },
+    // Restaurant Auth & Subscription
+    adminLogin: { url: baseURL + "/api/admin/login", method: "post" },
+    purchasePlan: { url: baseURL + "/api/admin/purchase-plan", method: "post" },
+    getMe: { url: baseURL + "/api/admin/me", method: "get" },
+    checkPlanAccess: { url: baseURL + "/api/admin/plan-access-check", method: "get" },
 
     // Menu / Products
     getProducts:    { url: baseURL + "/api/products",        method: "get"  },
@@ -38,6 +35,7 @@ const SummaryApi = {
     // Settings
     getSettings:    { url: baseURL + "/api/settings", method: "get" },
     updateSettings: { url: baseURL + "/api/settings", method: "put" },
+    
 }
 
 export default SummaryApi

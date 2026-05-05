@@ -186,13 +186,15 @@ const Tables = () => {
   };
 
   const seatGuests = (number, count) => {
-    setStatus(number, "occupied", parseInt(count) || 1);
+    setStatus(number, "occupied", parseInt(count) || 1);  
     navigate(`/?table=${number}&guests=${parseInt(count) || 1}`);
   };
 
   const generateBill = (activeOrder, tableNumber) => {
     if (activeOrder && activeOrder._id) {
       setBillData({ activeOrder, tableNumber });
+      updateOrderMutation.mutate({ id: activeOrder._id, status: 'completed' });
+      setStatus(tableNumber, "vacant");
       setSelectedId(null);
     } else {
       toast.info(`No active order to bill for Table ${tableNumber}. Table cleared.`);

@@ -63,9 +63,9 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border bg-primary">
         <div className="flex items-center gap-2.5 px-2 py-2">
           {restaurantLogo ? (
-            <img src={restaurantLogo} alt="Logo" className="h-9 w-9 rounded-lg object-cover shadow-soft shrink-0 bg-white" />
+            <img src={restaurantLogo} alt="Logo" className="h-9 w-9 rounded-full object-cover shadow-soft shrink-0 bg-white" />
           ) : (
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-accent text-accent-foreground shadow-soft">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-accent text-accent-foreground shadow-soft">
               <ChefHat className="h-5 w-5" />
             </span>
           )}

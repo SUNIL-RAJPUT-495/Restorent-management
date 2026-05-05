@@ -447,7 +447,7 @@ const Settings = () => {
                   <img 
                     src={settingsData.logo instanceof File ? URL.createObjectURL(settingsData.logo) : settingsData.logo} 
                     alt="Preview" 
-                    className="h-20 w-20 object-cover rounded-lg"
+                    className="h-20 w-20 object-cover rounded-full"
                   />
                 )}
               </div>
