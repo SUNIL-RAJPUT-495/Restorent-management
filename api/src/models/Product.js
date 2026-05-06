@@ -5,6 +5,9 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  restId: {
+    type: String,
+  },
   category: {
     type: String, 
     required: true,

@@ -13,6 +13,8 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound.jsx";
 import AdminLogin from "./pages/AdminLogin";
 import { ProtectedAdminRoute } from "./utils/ProtectedAdminRoute";
+import QRBuilder from "./pages/QRBuilder";
+import QROrderFlow from "./pages/QROrderFlow";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +36,8 @@ const App = () => (
         <Routes>
           {/* Public Route */}
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/order" element={<QROrderFlow />} />
+          <Route path="/order/status/:orderNumber" element={<QROrderFlow />} />
 
           {/* Protected Routes */}
           <Route
@@ -48,6 +52,7 @@ const App = () => (
                     <Route path="/menu" element={<MenuKDS />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/qr-builder" element={<QRBuilder />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>

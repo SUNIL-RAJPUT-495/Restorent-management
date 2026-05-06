@@ -6,6 +6,7 @@ import {
   BookOpen,
   BarChart3,
   Settings,
+  QrCode,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -30,6 +31,7 @@ const items = [
   { title: "Tables", url: "/tables", icon: ClipboardList },
   { title: "Inventory", url: "/inventory", icon: Boxes },
   { title: "Menu & KDS", url: "/menu", icon: BookOpen },
+  { title: "QR Generator", url: "/qr-builder", icon: QrCode },
   { title: "Reports", url: "/reports", icon: BarChart3 },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

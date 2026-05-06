@@ -6,6 +6,9 @@ const orderSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  restId: {
+    type: String,
+  },
   type: {
     type: String,
     enum: ['qsr', 'fine-dine'],
@@ -14,7 +17,13 @@ const orderSchema = new mongoose.Schema({
   tableNumber: {
     type: String,
   },
-  customer: {
+  customerName: {
+    type: String,
+  },
+  customerPhone: {
+    type: String,
+  },
+  customerEmail: {
     type: String,
   },
   items: [{
@@ -38,6 +47,26 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     enum: ['cash', 'card', 'online'],
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
+  razorpayOrderId: {
+    type: String,
+  },
+  razorpayPaymentId: {
+    type: String,
+  },
+  razorpaySignature: {
+    type: String,
+  },
+  imbOrderId: {
+    type: String,
+  },
+  imbPaymentId: {
+    type: String,
   },
 }, {
   timestamps: true,

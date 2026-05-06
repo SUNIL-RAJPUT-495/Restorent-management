@@ -1,4 +1,4 @@
-export const baseURL = import.meta.env.VITE_API_URL || "https://restorent-management-services-premi-three.vercel.app";
+export const baseURL = import.meta.env.VITE_API_URL || "https://restorent-management-g7de.vercel.app";
 
 const SummaryApi = {
    //app

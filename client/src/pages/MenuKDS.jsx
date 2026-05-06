@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { io } from "socket.io-client";
+import { baseURL } from "../common/SummerAPI";
 import AxiosAdmin from "@/utils/axiosAdmin";
 import SummaryApi from "@/common/SummerAPI";
 import { Button } from "@/components/ui/button";
@@ -64,6 +66,32 @@ const STATUS_STYLE = {
 
 const MenuKDS = () => {
   const queryClient = useQueryClient();
+
+  // Socket Connection for Real-time KDS
+  useEffect(() => {
+    const socket = io(baseURL);
+    
+    socket.on('connect', () => {
+      console.log('🔗 KDS Connected to WebSocket');
+    });
+
+    socket.on('newOrder', (newOrder) => {
+      console.log('🆕 New Order Received via Socket:', newOrder);
+      queryClient.invalidateQueries(["orders"]);
+      toast.success(`New Order #${newOrder.orderNumber}!`, {
+        description: `Table ${newOrder.tableNumber || 'Takeaway'}`,
+        icon: <ChefHat className="h-4 w-4" />
+      });
+    });
+
+    socket.on('orderUpdated', (updatedOrder) => {
+      queryClient.invalidateQueries(["orders"]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [queryClient]);
 
   // Fetch Menu Items
   const { data: items = [] } = useQuery({
