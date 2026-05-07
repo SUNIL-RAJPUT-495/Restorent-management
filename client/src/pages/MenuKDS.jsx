@@ -77,6 +77,11 @@ const MenuKDS = () => {
 
     socket.on('newOrder', (newOrder) => {
       console.log('🆕 New Order Received via Socket:', newOrder);
+      
+      // Play audio notification
+      const audio = new Audio('/notification.mp3');
+      audio.play().catch(e => console.log('Audio play failed:', e));
+      
       queryClient.invalidateQueries(["orders"]);
       toast.success(`New Order #${newOrder.orderNumber}!`, {
         description: `Table ${newOrder.tableNumber || 'Takeaway'}`,

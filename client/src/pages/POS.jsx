@@ -1,10 +1,11 @@
 import { useMemo, useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { io } from "socket.io-client";
 
 import { Button } from "@/components/ui/button";
 import AxiosAdmin from "@/utils/axiosAdmin";
-import SummaryApi from "@/common/SummerAPI";
+import SummaryApi, { baseURL } from "@/common/SummerAPI";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
@@ -62,6 +63,38 @@ const POS = () => {
       setGuests(Number(g));
     }
   }, [searchParams, tableNo]);
+
+  // Socket Connection for Real-time POS Notifications
+  useEffect(() => {
+    const socket = io(baseURL);
+    
+    socket.on('connect', () => {
+      console.log('🔗 POS Connected to WebSocket');
+    });
+
+    socket.on('newOrder', (newOrder) => {
+      console.log('🆕 New Order Received via Socket:', newOrder);
+      
+      // Play audio notification
+      const audio = new Audio('/notification.mp3');
+      audio.play().catch(e => console.log('Audio play failed:', e));
+      
+      toast.success(`New QR Order #${newOrder.orderNumber}!`, {
+        description: `Table ${newOrder.tableNumber || 'Takeaway'}`,
+        icon: <Zap className="h-4 w-4" />
+      });
+      
+      queryClient.invalidateQueries(["orders"]);
+    });
+
+    socket.on('orderUpdated', (updatedOrder) => {
+      queryClient.invalidateQueries(["orders"]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [queryClient]);
 
   // Fetch Tables (needed for selection)
   const { data: tables = [] } = useQuery({

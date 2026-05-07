@@ -1,20 +1,21 @@
+import React, { Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/app/AppLayout";
-import POS from "./pages/POS";
-import Tables from "./pages/Tables";
-import Inventory from "./pages/Inventory";
-import MenuKDS from "./pages/MenuKDS";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound.jsx";
-import AdminLogin from "./pages/AdminLogin";
+const POS = React.lazy(() => import("./pages/POS"));
+const Tables = React.lazy(() => import("./pages/Tables"));
+const Inventory = React.lazy(() => import("./pages/Inventory"));
+const MenuKDS = React.lazy(() => import("./pages/MenuKDS"));
+const Reports = React.lazy(() => import("./pages/Reports"));
+const Settings = React.lazy(() => import("./pages/Settings"));
+const NotFound = React.lazy(() => import("./pages/NotFound.jsx"));
+const AdminLogin = React.lazy(() => import("./pages/AdminLogin"));
 import { ProtectedAdminRoute } from "./utils/ProtectedAdminRoute";
-import QRBuilder from "./pages/QRBuilder";
-import QROrderFlow from "./pages/QROrderFlow";
+const QRBuilder = React.lazy(() => import("./pages/QRBuilder"));
+const QROrderFlow = React.lazy(() => import("./pages/QROrderFlow"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,18 +34,19 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* Public Route */}
+        <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center text-accent"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div></div>}>
+          <Routes>
+            {/* Public Route */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/order" element={<QROrderFlow />} />
           <Route path="/order/status/:orderNumber" element={<QROrderFlow />} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/*"
-            element={
-              <ProtectedAdminRoute>
-                <Routes>
+        {/* Protected Routes */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedAdminRoute>
+              <Routes>
                   <Route element={<AppLayout />}>
                     <Route path="/" element={<POS />} />
                     <Route path="/tables" element={<Tables />} />
@@ -60,6 +62,7 @@ const App = () => (
             }
           />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
