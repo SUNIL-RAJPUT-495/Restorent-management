@@ -45,20 +45,8 @@ export const AppLayout = () => {
                 {meta.sub}
               </p>
             </div>
-            <div className="relative hidden w-72 md:block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search orders, items, tables…"
-                className="pl-9"
-              />
-            </div>
-            <button
-              className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background hover:bg-muted"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
-            </button>
+            
+            
           </header>
           <main className="min-w-0 flex-1 p-4 md:p-6">
             <Outlet />
