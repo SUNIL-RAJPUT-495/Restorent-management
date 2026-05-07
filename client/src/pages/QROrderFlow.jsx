@@ -763,7 +763,7 @@ const QROrderFlow = () => {
                                             localStorage.removeItem('qr_last_order');
                                             setStep(1);
                                         }} 
-                                        onPrint={handlePrintBill}
+                                        actionType="download"
                                     />
                                 </div>
                             </div>

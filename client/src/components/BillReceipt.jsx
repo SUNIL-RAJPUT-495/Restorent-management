@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
+import html2canvas from 'html2canvas';
 
-const BillReceipt = ({ billData, settings, onClose, onPrint }) => {
+const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print' }) => {
+  const receiptRef = useRef(null);
   if (!billData || !billData.activeOrder) return null;
 
   const items = billData.activeOrder.items || [];
@@ -13,18 +15,32 @@ const BillReceipt = ({ billData, settings, onClose, onPrint }) => {
   const grandTotal = subtotal + cgst + sgst;
   const totalQty = items.reduce((s, i) => s + (i.qty || 1), 0);
 
-  const handlePrint = () => {
-    if (onPrint) {
-      onPrint();
+  const handleAction = async () => {
+    if (actionType === 'download') {
+      if (!receiptRef.current) return;
+      try {
+        const canvas = await html2canvas(receiptRef.current, { scale: 2, backgroundColor: "#ffffff" });
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = image;
+        link.download = `Receipt_${billData.activeOrder.orderNumber || Date.now()}.png`;
+        link.click();
+      } catch (err) {
+        console.error("Failed to download receipt", err);
+      }
     } else {
-      window.print();
+      if (onPrint) {
+        onPrint();
+      } else {
+        window.print();
+      }
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-white text-slate-900 w-full max-w-sm mx-auto">
       {/* Receipt Body — scrollable */}
-      <div className="overflow-y-auto no-scrollbar flex-1 font-mono text-xs p-4 print:p-0">
+      <div ref={receiptRef} className="overflow-y-auto no-scrollbar flex-1 font-mono text-xs p-4 print:p-0 bg-white">
         {/* Header */}
         <div className="text-center py-3 border-b border-dashed border-slate-300">
           <p className="text-base font-bold uppercase tracking-widest">{settings?.restaurantName || "Restaurant"}</p>
@@ -113,14 +129,14 @@ const BillReceipt = ({ billData, settings, onClose, onPrint }) => {
       </div>
 
       {/* Action Buttons (Hidden on Print) */}
-      <div className="p-4 pt-3 border-t border-slate-100 flex gap-2 print:hidden bg-slate-50">
+      <div className="p-4 pt-3 border-t border-slate-100 flex gap-2 print:hidden bg-slate-50" data-html2canvas-ignore="true">
         {onClose && (
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
           </Button>
         )}
-        <Button className="bg-slate-900 text-white flex-1 hover:bg-slate-800" onClick={handlePrint}>
-          Print Receipt
+        <Button className="bg-slate-900 text-white flex-1 hover:bg-slate-800" onClick={handleAction}>
+          {actionType === 'download' ? 'Download Receipt' : 'Print Receipt'}
         </Button>
       </div>
     </div>
