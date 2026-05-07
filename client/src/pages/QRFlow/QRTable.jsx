@@ -25,19 +25,33 @@ const QRTable = () => {
             </div>
 
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                {tables.map(table => (
-                    <button
-                        key={table.number}
-                        onClick={() => setSelectedTable(table.number)}
-                        className={`aspect-square rounded-[32px] flex flex-col items-center justify-center gap-2 transition-all border-2 ${selectedTable === table.number
-                                ? 'bg-accent border-accent text-white shadow-xl shadow-accent/20 scale-105'
-                                : 'bg-white border-slate-100 text-slate-400 hover:border-accent/30'
-                            }`}
-                    >
-                        <MapPin size={20} className={selectedTable === table.number ? 'text-white' : 'text-slate-300'} />
-                        <span className="font-black text-lg tracking-tighter">{table.number}</span>
-                    </button>
-                ))}
+                {tables.map(table => {
+                    const isOccupied = table.status === 'occupied';
+                    const isSelected = selectedTable === table.number;
+
+                    return (
+                        <button
+                            key={table.number}
+                            onClick={() => setSelectedTable(table.number)}
+                            className={`relative aspect-square rounded-[32px] flex flex-col items-center justify-center gap-2 transition-all border-2 overflow-hidden ${
+                                isSelected
+                                    ? 'bg-accent border-accent text-white shadow-xl shadow-accent/20 scale-105 z-10'
+                                    : isOccupied
+                                        ? 'bg-orange-50 border-orange-100 text-orange-500 hover:border-orange-300 hover:shadow-md'
+                                        : 'bg-white border-slate-100 text-slate-400 hover:border-accent/30 hover:shadow-sm'
+                                }`}
+                        >
+                            {isOccupied && !isSelected && (
+                                <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-orange-400 animate-pulse shadow-[0_0_8px_rgba(251,146,60,0.6)]"></div>
+                            )}
+                            <MapPin size={20} className={isSelected ? 'text-white' : isOccupied ? 'text-orange-400' : 'text-slate-300'} />
+                            <span className="font-black text-xl tracking-tighter">{table.number}</span>
+                            {isOccupied && !isSelected && (
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-orange-500/80 absolute bottom-3">In Use</span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
             {selectedTable && (
