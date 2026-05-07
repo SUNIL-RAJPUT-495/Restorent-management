@@ -1,12 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AxiosAdmin from '@/utils/axiosAdmin';
 import SummaryApi from '@/common/SummerAPI';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import { MapPin, Phone, CreditCard, Banknote } from 'lucide-react';
+import { MapPin, Phone, CreditCard, Banknote, ShoppingBag } from 'lucide-react';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const SelfOrders = () => {
+    const [selectedOrder, setSelectedOrder] = useState(null);
     const { data: allOrders = [], isLoading } = useQuery({
         queryKey: ['orders'],
         queryFn: async () => {
@@ -53,7 +55,11 @@ const SelfOrders = () => {
                             </TableRow>
                         ) : (
                             selfOrders.map(order => (
-                                <TableRow key={order._id} className="group">
+                                <TableRow 
+                                    key={order._id} 
+                                    className="group cursor-pointer hover:bg-muted/50 transition-colors"
+                                    onClick={() => setSelectedOrder(order)}
+                                >
                                     <TableCell>
                                         <div className="space-y-1">
                                             <div className="font-bold text-primary">{order.orderNumber}</div>
@@ -110,6 +116,44 @@ const SelfOrders = () => {
                     </TableBody>
                 </Table>
             </div>
+
+            <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+                <DialogContent className="max-w-md">
+                    {selectedOrder && (
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-primary mb-1">Order Details</h3>
+                                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                    <span className="font-bold text-accent">{selectedOrder.orderNumber}</span>
+                                    • {format(new Date(selectedOrder.createdAt), "dd MMM yyyy, hh:mm a")}
+                                </p>
+                            </div>
+
+                            <div className="bg-muted/30 rounded-xl p-4 border border-border space-y-3">
+                                <div className="flex items-center gap-2 text-sm font-bold text-primary pb-2 border-b border-border">
+                                    <ShoppingBag size={16} />
+                                    Ordered Items
+                                </div>
+                                <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                                    {selectedOrder.items?.map((item, index) => (
+                                        <div key={index} className="flex justify-between items-start">
+                                            <div>
+                                                <p className="text-sm font-semibold text-primary">{item.name}</p>
+                                                <p className="text-xs text-muted-foreground">Qty: {item.qty} × ₹{item.price?.toFixed(2)}</p>
+                                            </div>
+                                            <p className="text-sm font-bold text-primary">₹{(item.qty * item.price)?.toFixed(2)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="pt-3 border-t border-border flex justify-between items-center">
+                                    <span className="text-sm font-bold text-muted-foreground">Total Amount</span>
+                                    <span className="text-lg font-black text-primary">₹{selectedOrder.totalAmount?.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
