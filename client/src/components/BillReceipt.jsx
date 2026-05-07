@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 
 const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print' }) => {
   const receiptRef = useRef(null);
@@ -19,10 +19,9 @@ const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print
     if (actionType === 'download') {
       if (!receiptRef.current) return;
       try {
-        const canvas = await html2canvas(receiptRef.current, { scale: 2, backgroundColor: "#ffffff" });
-        const image = canvas.toDataURL("image/png");
+        const dataUrl = await htmlToImage.toPng(receiptRef.current, { backgroundColor: '#ffffff', pixelRatio: 2 });
         const link = document.createElement("a");
-        link.href = image;
+        link.href = dataUrl;
         link.download = `Receipt_${billData.activeOrder.orderNumber || Date.now()}.png`;
         link.click();
       } catch (err) {
@@ -39,19 +38,21 @@ const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print
 
   return (
     <div className="flex flex-col h-full bg-white text-slate-900 w-full max-w-sm mx-auto">
-      {/* Receipt Body — scrollable */}
-      <div ref={receiptRef} className="overflow-y-auto no-scrollbar flex-1 font-mono text-xs p-4 print:p-0 bg-white">
-        {/* Header */}
-        <div className="text-center py-3 border-b border-dashed border-slate-300">
-          <p className="text-base font-bold uppercase tracking-widest">{settings?.restaurantName || "Restaurant"}</p>
-          {settings?.gstNo && <p className="mt-0.5 text-slate-500">GSTIN: {settings.gstNo}</p>}
-          {settings?.fssaiNo && <p className="text-slate-500">FSSAI: {settings.fssaiNo}</p>}
-          {settings?.location && <p className="text-slate-500">{settings.location}</p>}
-          {settings?.phone && <p className="text-slate-500">Mob: {settings.phone}</p>}
-        </div>
+      {/* Scrollable Container */}
+      <div className="overflow-y-auto no-scrollbar flex-1 bg-white">
+        {/* Receipt Body — to capture */}
+        <div ref={receiptRef} className="font-mono text-xs p-4 print:p-0 bg-white min-h-max w-full">
+          {/* Header */}
+          <div className="text-center py-3 border-b border-dashed border-slate-300">
+            <p className="text-base font-bold uppercase tracking-widest">{settings?.restaurantName || "Restaurant"}</p>
+            {settings?.gstNo && <p className="mt-0.5 text-slate-500">GSTIN: {settings.gstNo}</p>}
+            {settings?.fssaiNo && <p className="text-slate-500">FSSAI: {settings.fssaiNo}</p>}
+            {settings?.location && <p className="text-slate-500">{settings.location}</p>}
+            {settings?.phone && <p className="text-slate-500">Mob: {settings.phone}</p>}
+          </div>
 
-        {/* Bill Meta */}
-        <div className="py-2 border-b border-dashed border-slate-300 space-y-0.5">
+          {/* Bill Meta */}
+          <div className="py-2 border-b border-dashed border-slate-300 space-y-0.5">
           <div className="flex justify-between">
             <span className="text-slate-500">Bill No:</span>
             <span>#{billData.activeOrder.orderNumber?.slice(-6) || '0000'}</span>
@@ -118,18 +119,19 @@ const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print
           </div>
         </div>
 
-        {/* Grand Total */}
-        <div className="py-3 text-center">
-          <div className="flex justify-between text-sm font-bold text-slate-900 border-t-2 border-slate-800 pt-2">
-            <span>GRAND TOTAL</span>
-            <span>₹{grandTotal.toFixed(2)}</span>
+          {/* Grand Total */}
+          <div className="py-3 text-center">
+            <div className="flex justify-between text-sm font-bold text-slate-900 border-t-2 border-slate-800 pt-2">
+              <span>GRAND TOTAL</span>
+              <span>₹{grandTotal.toFixed(2)}</span>
+            </div>
+            <p className="mt-3 text-[10px] text-slate-500 italic">"Good food, good times. Thanks for choosing us!"</p>
           </div>
-          <p className="mt-3 text-[10px] text-slate-500 italic">"Good food, good times. Thanks for choosing us!"</p>
         </div>
       </div>
 
       {/* Action Buttons (Hidden on Print) */}
-      <div className="p-4 pt-3 border-t border-slate-100 flex gap-2 print:hidden bg-slate-50" data-html2canvas-ignore="true">
+      <div className="p-4 pt-3 border-t border-slate-100 flex gap-2 print:hidden bg-slate-50">
         {onClose && (
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
