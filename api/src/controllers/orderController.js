@@ -32,6 +32,12 @@ export const createOrder = async (req, res) => {
       );
     }
 
+    // Emit socket event for KDS and live tracking
+    const io = req.app.get('socketio');
+    if (io) {
+      io.emit('newOrder', createdOrder);
+    }
+
     res.status(201).json(createdOrder);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -68,6 +74,12 @@ export const updateOrderStatus = async (req, res) => {
           { number: order.tableNumber },
           { status: 'vacant', guests: 0, occupiedSince: null }
         );
+      }
+
+      // Emit socket event so QR tracking and KDS updates instantly
+      const io = req.app.get('socketio');
+      if (io) {
+        io.emit('orderUpdated', updatedOrder);
       }
 
       res.json(updatedOrder);

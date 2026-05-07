@@ -31,6 +31,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import BillReceipt from "@/components/BillReceipt";
 
 
 const categories = ["All", "Starters", "Main Course", "Drinks", "Desserts"];
@@ -587,115 +588,18 @@ const POS = () => {
 
       {/* Bill/Receipt Dialog */}
       <Dialog open={!!billData} onOpenChange={(o) => !o && setBillData(null)}>
-        <DialogContent className="max-w-sm flex flex-col max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="max-w-sm flex flex-col max-h-[90vh] p-0 overflow-hidden bg-white border-slate-100 print:shadow-none print:border-none">
+          <DialogHeader className="hidden">
             <DialogTitle className="sr-only">Receipt</DialogTitle>
             <DialogDescription className="sr-only">Final bill for your order.</DialogDescription>
           </DialogHeader>
-          {billData && (() => {
-            const items = billData.activeOrder.items || [];
-            const subtotal = items.reduce((s, i) => s + (i.price * i.qty), 0);
-            const cgstRate = (settings?.cgst ?? 2.5) / 100;
-            const sgstRate = (settings?.sgst ?? 2.5) / 100;
-            const cgst = subtotal * cgstRate;
-            const sgst = subtotal * sgstRate;
-            const grandTotal = subtotal + cgst + sgst;
-            const totalQty = items.reduce((s, i) => s + i.qty, 0);
-            return (
-              <>
-                {/* Receipt Body — scrollable */}
-                <div className="overflow-y-auto no-scrollbar flex-1 font-mono text-xs">
-                  {/* Header */}
-                  <div className="text-center py-3 border-b border-dashed border-border">
-                    <p className="text-base font-bold uppercase tracking-widest text-primary">{settings?.restaurantName || "Restaurant"}</p>
-                    {settings?.gstNo && <p className="mt-0.5 text-muted-foreground">GSTIN: {settings.gstNo}</p>}
-                    {settings?.fssaiNo && <p className="text-muted-foreground">FSSAI: {settings.fssaiNo}</p>}
-                    {settings?.location && <p className="text-muted-foreground">{settings.location}</p>}
-                    {settings?.phone && <p className="text-muted-foreground">Mob: {settings.phone}</p>}
-                  </div>
-
-                  {/* Bill Meta */}
-                  <div className="py-2 border-b border-dashed border-border space-y-0.5">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Bill No:</span>
-                      <span>#{billData.activeOrder.orderNumber?.slice(-6)}</span>
-                    </div>
-                    {billData.tableNumber && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Table:</span>
-                        <span>{String(billData.tableNumber).padStart(2, '0')}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Mode:</span>
-                      <span className="uppercase">{billData.activeOrder.type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Date:</span>
-                      <span>{new Date(billData.activeOrder.createdAt || new Date()).toLocaleDateString('en-IN')}</span>
-                    </div>
-                  </div>
-
-                  {/* Items Table */}
-                  <div className="py-2 border-b border-dashed border-border">
-                    <div className="flex justify-between font-bold border-b border-border pb-1 mb-1">
-                      <span className="w-5">#</span>
-                      <span className="flex-1">Item</span>
-                      <span className="w-8 text-center">Qty</span>
-                      <span className="w-16 text-right">Amt</span>
-                    </div>
-                    {items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between py-0.5">
-                        <span className="w-5 text-muted-foreground">{idx + 1}</span>
-                        <span className="flex-1 truncate pr-1">{item.name}</span>
-                        <span className="w-8 text-center">{item.qty}</span>
-                        <span className="w-16 text-right">₹{(item.price * item.qty).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Totals */}
-                  <div className="py-2 border-b border-dashed border-border space-y-0.5">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Qty</span>
-                      <span>{totalQty}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Amount</span>
-                      <span>₹{subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">CGST ({settings?.cgst ?? 2.5}%)</span>
-                      <span>₹{cgst.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">SGST ({settings?.sgst ?? 2.5}%)</span>
-                      <span>₹{sgst.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Grand Total */}
-                  <div className="py-3 text-center">
-                    <div className="flex justify-between text-sm font-bold text-primary border-t-2 border-primary pt-2">
-                      <span>GRAND TOTAL</span>
-                      <span>₹{grandTotal.toFixed(2)}</span>
-                    </div>
-                    <p className="mt-3 text-[10px] text-muted-foreground">Good food, good times. Thanks for choosing us!</p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-3 border-t border-border flex gap-2">
-                  <Button variant="outline" onClick={() => setBillData(null)} className="flex-1">
-                    Close
-                  </Button>
-                  <Button className="bg-primary text-primary-foreground flex-1" onClick={() => window.print()}>
-                    Print Receipt
-                  </Button>
-                </div>
-              </>
-            );
-          })()}
+          {billData && (
+            <BillReceipt 
+                billData={billData} 
+                settings={settings} 
+                onClose={() => setBillData(null)} 
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

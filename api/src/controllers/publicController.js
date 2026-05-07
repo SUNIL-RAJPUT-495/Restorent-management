@@ -2,6 +2,7 @@ import Product from '../models/Product.js';
 import Table from '../models/Table.js';
 import Order from '../models/Order.js';
 import Setting from '../models/Setting.js';
+import Feedback from '../models/Feedback.js';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import axios from 'axios';
@@ -324,5 +325,27 @@ export const imbWebhook = async (req, res) => {
   } catch (error) {
     console.error("Webhook Error:", error);
     return res.status(500).send("Internal Server Error");
+  }
+};
+
+/**
+ * Submit Customer Feedback
+ */
+export const submitFeedback = async (req, res) => {
+  try {
+    const { orderNumber, rating, comment, customerName, customerPhone } = req.body;
+    
+    const feedback = new Feedback({
+      orderNumber,
+      rating,
+      comment,
+      customerName,
+      customerPhone
+    });
+
+    await feedback.save();
+    res.status(201).json({ message: 'Feedback submitted successfully', feedback });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };

@@ -8,7 +8,8 @@ import {
   createImbOrder,
   verifyImbPayment,
   imbWebhook,
-  getRestaurantInfo
+  getRestaurantInfo,
+  submitFeedback
 } from '../controllers/publicController.js';
 
 const router = express.Router();
@@ -25,5 +26,8 @@ router.post('/payment/razorpay/verify', verifyRazorpayPayment);
 router.post('/payment/imb/create', createImbOrder);
 router.post('/payment/imb/verify', verifyImbPayment);
 router.post('/payment/imb/webhook', imbWebhook);
+
+// Feedback
+router.post('/feedback', submitFeedback);
 
 export default router;

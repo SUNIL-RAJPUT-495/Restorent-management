@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { ShoppingCart, ArrowLeft, CheckCircle, CreditCard, Banknote, MapPin, ChefHat, Search, Info, Plus, Minus, X, User, Phone, Mail, ArrowRight, Star, Sparkles } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, CheckCircle, CreditCard, Banknote, MapPin, ChefHat, Search, Info, Plus, Minus, X, User, Phone, Mail, ArrowRight, Star, Sparkles, FileText } from 'lucide-react';
+import { io } from 'socket.io-client';
+import BillReceipt from '../components/BillReceipt';
 import { baseURL } from '../common/SummerAPI';
 import { toast } from 'sonner';
 
@@ -45,7 +47,66 @@ const QROrderFlow = () => {
         const saved = localStorage.getItem('qr_last_order');
         return saved ? JSON.parse(saved) : null;
     });
+    const [feedback, setFeedback] = useState({ rating: 0, comment: '' });
     const [loading, setLoading] = useState(true);
+
+    // Socket Connection for Real-time Tracking
+    useEffect(() => {
+        if (step === 5) {
+            const socket = io(baseURL);
+            
+            socket.on('connect', () => console.log('QR Flow Connected to WebSocket'));
+            
+            socket.on('orderUpdated', (updatedOrder) => {
+                console.log('QR Flow received orderUpdated via Socket:', updatedOrder);
+                
+                setOrderConfirmed((prev) => {
+                    if (prev && prev.orderNumber === updatedOrder.orderNumber) {
+                        localStorage.setItem('qr_last_order', JSON.stringify(updatedOrder));
+                        
+                        if (updatedOrder.status === 'delivered') {
+                            setTimeout(() => {
+                                setStep(6); // Transition to feedback
+                            }, 2000);
+                        }
+                        return updatedOrder;
+                    }
+                    return prev;
+                });
+            });
+
+            return () => socket.disconnect();
+        }
+    }, [step]);
+
+    const handlePrintBill = () => {
+        window.print();
+    };
+
+    const submitFeedback = async () => {
+        try {
+            const lastOrder = JSON.parse(localStorage.getItem('qr_last_order'));
+            await axios.post(`${baseURL}/api/public/feedback`, {
+                orderNumber: lastOrder?.orderNumber,
+                rating: feedback.rating,
+                comment: feedback.comment,
+                customerName: customerInfo?.name,
+                customerPhone: customerInfo?.phone
+            });
+            toast.success("Thank you for your valuable feedback!");
+        } catch (error) {
+            console.error("Feedback error", error);
+            toast.error("Failed to save feedback, but thank you anyway!");
+        } finally {
+            setCart({});
+            setOrderConfirmed(null);
+            localStorage.removeItem('qr_cart_data');
+            localStorage.removeItem('qr_current_step');
+            localStorage.removeItem('qr_last_order');
+            setStep(1);
+            setFeedback({ rating: 0, comment: '' });
+        }
+    };
 
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
@@ -620,87 +681,138 @@ const QROrderFlow = () => {
                             </div>
                         )}
 
-                        {/* Step 5: Modern Success Screen */}
+                        {/* Step 5: Modern Success & Live Tracking Screen */}
                         {step === 5 && orderConfirmed && (
-                            <div className="max-w-md mx-auto text-center space-y-10 py-5 animate-in fade-in zoom-in duration-1000">
+                            <div className="max-w-md mx-auto text-center space-y-8 py-5 animate-in fade-in zoom-in duration-1000 print:space-y-4 print:py-0">
                                 {/* Success Animation & Header */}
-                                <div className="space-y-4">
+                                <div className="space-y-4 print:hidden">
                                     <div className="relative inline-block">
                                         <div className="absolute inset-0 bg-accent rounded-full blur-3xl opacity-20 animate-pulse"></div>
-                                        <div className="relative w-20 h-20 bg-accent text-white rounded-[28px] flex items-center justify-center mx-auto shadow-2xl shadow-accent/40 rotate-12">
-                                            <CheckCircle size={40} strokeWidth={3} className="-rotate-12" />
+                                        <div className="relative w-20 h-20 bg-accent text-white rounded-[28px] flex items-center justify-center mx-auto shadow-2xl shadow-accent/40 rotate-12 transition-transform hover:scale-110">
+                                            {orderConfirmed.status === 'preparing' ? <ChefHat size={40} className="-rotate-12 animate-pulse" /> : 
+                                             orderConfirmed.status === 'ready' ? <Sparkles size={40} className="-rotate-12 animate-pulse text-yellow-300" /> :
+                                             <CheckCircle size={40} strokeWidth={3} className="-rotate-12" />}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <h2 className="text-4xl font-black text-slate-900 italic uppercase tracking-tighter">Ordered!</h2>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Kitchen is preparing your feast</p>
+                                        <h2 className="text-4xl font-black text-slate-900 italic uppercase tracking-tighter">
+                                            {orderConfirmed.status === 'preparing' ? 'Preparing!' :
+                                             orderConfirmed.status === 'ready' ? 'Ready!' :
+                                             'Ordered!'}
+                                        </h2>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">
+                                            {orderConfirmed.status === 'preparing' ? 'Chef is cooking your feast' :
+                                             orderConfirmed.status === 'ready' ? 'Your food is ready to be served' :
+                                             'Kitchen received your order'}
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Digital Receipt Card */}
-                                <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden text-left mx-4">
-                                    <div className="h-2 bg-accent w-full" />
+                                {/* Live Status Stepper */}
+                                <div className="bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm relative overflow-hidden print:hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-accent/5 to-transparent opacity-50" />
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 relative z-10">Live Status</h3>
                                     
-                                    <div className="p-8 space-y-8">
-                                        {/* Order Info */}
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order ID</p>
-                                                <p className="text-2xl font-black text-slate-900 italic tracking-tighter">#{orderConfirmed.orderNumber || '0000'}</p>
-                                            </div>
-                                            <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100 text-center">
-                                                <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Table</p>
-                                                <p className="text-xl font-black text-slate-900 italic tracking-tighter leading-none">{selectedTable}</p>
-                                            </div>
-                                        </div>
+                                    <div className="flex justify-between items-center relative z-10">
+                                        {/* Background Track */}
+                                        <div className="absolute top-1/2 left-4 right-4 h-1 bg-slate-100 -translate-y-1/2 rounded-full z-0" />
+                                        
+                                        {/* Progress Track */}
+                                        <div className="absolute top-1/2 left-4 h-1 bg-accent -translate-y-1/2 rounded-full z-0 transition-all duration-1000 ease-in-out" 
+                                            style={{ 
+                                                width: orderConfirmed.status === 'new' ? '0%' : 
+                                                       orderConfirmed.status === 'preparing' ? '33%' : 
+                                                       orderConfirmed.status === 'ready' ? '66%' : '100%' 
+                                            }} 
+                                        />
 
-                                        {/* Payment Status */}
-                                        <div className="bg-slate-50/50 rounded-2xl p-4 flex items-center justify-between border border-slate-50">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-400 shadow-sm">
-                                                    <Banknote size={14} />
+                                        {[
+                                            { id: 'new', icon: CheckCircle, label: 'Confirmed' },
+                                            { id: 'preparing', icon: ChefHat, label: 'Preparing' },
+                                            { id: 'ready', icon: Sparkles, label: 'Ready' },
+                                            { id: 'delivered', icon: MapPin, label: 'Served' }
+                                        ].map((s, index) => {
+                                            const statusOrder = ['new', 'preparing', 'ready', 'delivered'];
+                                            const currentIndex = statusOrder.indexOf(orderConfirmed.status || 'new');
+                                            const isCompleted = index <= currentIndex;
+                                            const isCurrent = index === currentIndex;
+                                            const Icon = s.icon;
+                                            
+                                            return (
+                                                <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 border-2 ${isCompleted ? 'bg-accent border-accent text-white shadow-lg shadow-accent/30 scale-110' : 'bg-white border-slate-200 text-slate-300'}`}>
+                                                        <Icon size={14} className={isCurrent && orderConfirmed.status !== 'delivered' ? 'animate-pulse' : ''} />
+                                                    </div>
+                                                    <span className={`text-[8px] font-bold uppercase tracking-widest ${isCompleted ? 'text-accent' : 'text-slate-300'}`}>{s.label}</span>
                                                 </div>
-                                                <div>
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Payment</p>
-                                                    <p className="text-[10px] font-black text-slate-900 uppercase italic">
-                                                        {orderConfirmed.paymentMethod === 'online' ? 'Paid Online' : 'Pay via Cash'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <span className="bg-green-500/10 text-green-500 text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
-                                                Confirmed
-                                            </span>
-                                        </div>
-
-                                        {/* Thank You Note */}
-                                        <div className="pt-2 text-center space-y-1">
-                                            <p className="text-[10px] font-bold text-slate-400 italic">"Enjoy your meal at {restaurantInfo?.restaurantName || 'our restaurant'}!"</p>
-                                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Digital Invoice Sent to {customerInfo.phone}</p>
-                                        </div>
+                                            );
+                                        })}
                                     </div>
+                                </div>
 
-                                    {/* Perforated Edge Effect */}
-                                    <div className="flex justify-between px-2 pb-2">
-                                        {[...Array(15)].map((_, i) => (
-                                            <div key={i} className="w-2 h-2 rounded-full bg-slate-50 border border-slate-100 -mb-3" />
+                                {/* Unified Bill Receipt */}
+                                <div className="mx-4 overflow-hidden rounded-[40px] border border-slate-100 shadow-2xl shadow-slate-200/50 print:mx-0 print:shadow-none print:border-none print:rounded-none bg-white">
+                                    <BillReceipt 
+                                        billData={{ activeOrder: orderConfirmed, tableNumber: selectedTable }} 
+                                        settings={restaurantInfo} 
+                                        onClose={() => {
+                                            setCart({});
+                                            setOrderConfirmed(null);
+                                            localStorage.removeItem('qr_cart_data');
+                                            localStorage.removeItem('qr_current_step');
+                                            localStorage.removeItem('qr_last_order');
+                                            setStep(1);
+                                        }} 
+                                        onPrint={handlePrintBill}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 6: Feedback Screen */}
+                        {step === 6 && (
+                            <div className="max-w-md mx-auto text-center space-y-8 py-10 animate-in slide-in-from-bottom-8 duration-700">
+                                <div className="space-y-4">
+                                    <div className="w-20 h-20 bg-accent/10 text-accent rounded-[28px] flex items-center justify-center mx-auto shadow-inner border border-accent/20">
+                                        <Star size={40} className="fill-accent/20" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h2 className="text-3xl font-black text-slate-900 italic uppercase tracking-tighter">Give Feedback</h2>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">How was your experience?</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 space-y-8">
+                                    <div className="flex justify-center gap-3">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                                key={star}
+                                                onClick={() => setFeedback({ ...feedback, rating: star })}
+                                                className={`transition-all hover:scale-110 active:scale-90 ${feedback.rating >= star ? 'text-yellow-400' : 'text-slate-200'}`}
+                                            >
+                                                <Star size={32} className={feedback.rating >= star ? 'fill-yellow-400 drop-shadow-md' : ''} />
+                                            </button>
                                         ))}
                                     </div>
-                                </div>
 
-                                <button
-                                    onClick={() => {
-                                        setCart({});
-                                        setOrderConfirmed(null);
-                                        localStorage.removeItem('qr_cart_data');
-                                        localStorage.removeItem('qr_current_step');
-                                        localStorage.removeItem('qr_last_order');
-                                        setStep(1);
-                                    }}
-                                    className="inline-flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] hover:text-accent transition-colors group"
-                                >
-                                    <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                                    Back to Menu
-                                </button>
+                                    <div className="space-y-3 text-left">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Additional Comments</label>
+                                        <textarea 
+                                            value={feedback.comment}
+                                            onChange={(e) => setFeedback({ ...feedback, comment: e.target.value })}
+                                            placeholder="Tell us what you loved..."
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all resize-none h-28 placeholder:text-slate-300"
+                                        ></textarea>
+                                    </div>
+
+                                    <button
+                                        onClick={submitFeedback}
+                                        disabled={!feedback.rating}
+                                        className="w-full bg-accent text-white rounded-2xl py-4 font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                                    >
+                                        Submit Feedback
+                                    </button>
+                                </div>
                             </div>
                         )}
 
