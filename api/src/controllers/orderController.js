@@ -63,13 +63,13 @@ export const updateOrderStatus = async (req, res) => {
       const updatedOrder = await order.save();
 
       // Automatically mark table as occupied if an order gets active again
-      if (order.tableNumber && ['new', 'preparing', 'ready', 'delivered'].includes(updatedOrder.status)) {
+      if (order.tableNumber && ['new', 'preparing', 'ready'].includes(updatedOrder.status)) {
         await Table.findOneAndUpdate(
           { number: order.tableNumber },
           { status: 'occupied' }
         );
-      } else if (order.tableNumber && ['completed', 'cancelled'].includes(updatedOrder.status)) {
-        // Automatically clear table if order is completed or cancelled
+      } else if (order.tableNumber && ['completed', 'cancelled', 'delivered'].includes(updatedOrder.status)) {
+        // Automatically clear table if order is completed, cancelled, or delivered
         await Table.findOneAndUpdate(
           { number: order.tableNumber },
           { status: 'vacant', guests: 0, occupiedSince: null }
