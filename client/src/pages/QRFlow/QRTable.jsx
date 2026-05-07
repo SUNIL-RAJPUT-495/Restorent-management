@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import { useQRContext } from './QRContext';
+import { toast } from 'sonner';
 
 const QRTable = () => {
     const { tables, isLoading, selectedTable, setSelectedTable, setStep } = useQRContext();
@@ -32,7 +33,13 @@ const QRTable = () => {
                     return (
                         <button
                             key={table.number}
-                            onClick={() => setSelectedTable(table.number)}
+                        onClick={() => {
+                            if (isOccupied) {
+                                toast.error("Table is already full");
+                                return;
+                            }
+                            setSelectedTable(table.number);
+                        }}
                             className={`relative aspect-square rounded-[32px] flex flex-col items-center justify-center gap-2 transition-all border-2 overflow-hidden ${
                                 isSelected
                                     ? 'bg-accent border-accent text-white shadow-xl shadow-accent/20 scale-105 z-10'
