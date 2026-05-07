@@ -256,12 +256,16 @@ export const verifyImbPayment = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const statusPayload = {
+    const statusPayload = new URLSearchParams({
       user_token: process.env.IMB_CLIENT_SECRET,
       order_id: orderNumber
-    };
+    });
 
-    const response = await axios.post(process.env.IMB_STATUS_URL, statusPayload);
+    const response = await axios.post(process.env.IMB_STATUS_URL, statusPayload.toString(), {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    });
     const data = response.data;
 
     if (data.status === "SUCCESS" || data.status === "COMPLETED") {
