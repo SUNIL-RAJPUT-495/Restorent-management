@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import axios from 'axios';
 
-const IMB_CREATE_ORDER_URL = `${process.env.IMB_BASE_URL}/api/create-order`;
+
 const IMB_STATUS_URL = process.env.IMB_STATUS_URL;
 const IMB_CLIENT_SECRET = process.env.IMB_CLIENT_SECRET;
 
