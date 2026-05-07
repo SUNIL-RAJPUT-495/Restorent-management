@@ -251,9 +251,24 @@ export const verifyImbPayment = async (req, res) => {
   try {
     const { orderNumber } = req.body;
 
+    if (!orderNumber) {
+      return res.status(400).json({ message: "Order number is required" });
+    }
+
+    // Guard: check env vars are set (common issue on Vercel if not configured)
+    if (!process.env.IMB_STATUS_URL || !process.env.IMB_CLIENT_SECRET) {
+      console.error("IMB env vars missing: IMB_STATUS_URL or IMB_CLIENT_SECRET not set");
+      return res.status(503).json({ message: "Payment verification service not configured. Please contact support." });
+    }
+
     const order = await Order.findOne({ orderNumber });
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
+    }
+
+    // If already marked completed (e.g. via webhook), return success directly
+    if (order.paymentStatus === 'completed') {
+      return res.status(200).json({ success: true, order });
     }
 
     const statusPayload = new URLSearchParams({
@@ -262,9 +277,8 @@ export const verifyImbPayment = async (req, res) => {
     });
 
     const response = await axios.post(process.env.IMB_STATUS_URL, statusPayload.toString(), {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      timeout: 10000 // 10 second timeout
     });
     const data = response.data;
 
@@ -276,7 +290,7 @@ export const verifyImbPayment = async (req, res) => {
 
         const io = req.app.get('socketio');
         if (io) {
-          io.emit('newOrder', order); // Notify KDS
+          io.emit('newOrder', order);
           io.emit('orderUpdated', order);
         }
       }
@@ -286,11 +300,11 @@ export const verifyImbPayment = async (req, res) => {
     } else {
       order.paymentStatus = 'failed';
       await order.save();
-      return res.status(400).json({ message: "Payment failed" });
+      return res.status(400).json({ message: "Payment failed or cancelled" });
     }
   } catch (error) {
     console.error("IMB Verify Payment Error Details:", error.response?.data || error.message);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.response?.data?.message || error.message });
   }
 };
 
