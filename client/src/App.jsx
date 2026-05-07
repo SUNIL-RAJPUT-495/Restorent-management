@@ -16,6 +16,7 @@ const AdminLogin = React.lazy(() => import("./pages/AdminLogin"));
 import { ProtectedAdminRoute } from "./utils/ProtectedAdminRoute";
 const QRBuilder = React.lazy(() => import("./pages/QRBuilder"));
 const QROrderFlow = React.lazy(() => import("./pages/QROrderFlow"));
+const SelfOrders = React.lazy(() => import("./pages/SelfOrders"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +56,7 @@ const App = () => (
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/qr-builder" element={<QRBuilder />} />
+                    <Route path="/self-orders" element={<SelfOrders />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>

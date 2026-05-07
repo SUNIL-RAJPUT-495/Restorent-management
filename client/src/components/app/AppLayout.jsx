@@ -23,6 +23,7 @@ const titles = {
     sub: "Sales, expenses, customer behavior",
   },
   "/settings": { title: "Settings", sub: "Permissions, integrations and more" },
+  "/self-orders": { title: "Self Orders", sub: "Manage QR & Online orders" },
 };
 
 export const AppLayout = () => {

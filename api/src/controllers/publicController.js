@@ -83,6 +83,7 @@ export const placeOrder = async (req, res) => {
       customerName,
       customerPhone,
       customerEmail,
+      source: 'self-order',
       paymentStatus: paymentMethod === 'cash' ? 'completed' : 'pending',
     });
 
@@ -190,6 +191,7 @@ export const createImbOrder = async (req, res) => {
       customerName,
       customerPhone,
       customerEmail,
+      source: 'self-order',
       paymentMethod: 'online',
       paymentStatus: 'pending',
     });

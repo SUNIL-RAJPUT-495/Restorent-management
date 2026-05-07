@@ -26,6 +26,11 @@ const orderSchema = new mongoose.Schema({
   customerEmail: {
     type: String,
   },
+  source: {
+    type: String,
+    enum: ['pos', 'self-order'],
+    default: 'pos'
+  },
   items: [{
     productId: {
       type: mongoose.Schema.Types.ObjectId,
