@@ -4,7 +4,7 @@ import { useQRContext } from './QRContext';
 import BillReceipt from '../../components/BillReceipt';
 
 const QRSuccess = () => {
-    const { orderConfirmed, selectedTable, restaurantInfo, resetFlow } = useQRContext();
+    const { orderConfirmed, selectedTable, restaurantInfo, resetFlow, startNewOrder } = useQRContext();
 
     if (!orderConfirmed) return null;
 
@@ -79,7 +79,7 @@ const QRSuccess = () => {
                 <BillReceipt 
                     billData={{ activeOrder: orderConfirmed, tableNumber: selectedTable }} 
                     settings={restaurantInfo} 
-                    onClose={resetFlow} 
+                    onClose={startNewOrder} 
                     actionType="download"
                 />
             </div>

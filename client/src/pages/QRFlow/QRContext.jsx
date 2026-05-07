@@ -177,6 +177,12 @@ export const QRProvider = ({ children }) => {
         setStep(0);  // Go back to onboarding so new customer can start fresh
     };
 
+    const startNewOrder = () => {
+        setCart({});
+        localStorage.removeItem('qr_cart_data');
+        setStep(1); // Go back to menu, preserving orderConfirmed
+    };
+
     const isLoading = isMenuLoading || isTablesLoading || isInfoLoading || isVerifying;
 
     return (
@@ -189,7 +195,7 @@ export const QRProvider = ({ children }) => {
             paymentMethod, setPaymentMethod,
             orderConfirmed, setOrderConfirmed,
             feedback, setFeedback,
-            resetFlow
+            resetFlow, startNewOrder
         }}>
             {children}
         </QRContext.Provider>
