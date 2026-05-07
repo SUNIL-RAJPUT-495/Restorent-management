@@ -52,7 +52,7 @@ const QROrderFlow = () => {
 
     // Socket Connection for Real-time Tracking
     useEffect(() => {
-        if (step === 5) {
+        if (step === 5 || (step === 1 && orderConfirmed && orderConfirmed.status !== 'delivered')) {
             const socket = io(baseURL);
             
             socket.on('connect', () => console.log('QR Flow Connected to WebSocket'));
@@ -355,6 +355,61 @@ const QROrderFlow = () => {
                     </header>
 
                     <main className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-500">
+                        {step === 1 && orderConfirmed && orderConfirmed.status !== 'delivered' && (
+                            <div 
+                                onClick={() => setStep(5)}
+                                className="mb-6 bg-white rounded-2xl border border-accent/20 p-4 shadow-lg shadow-accent/5 cursor-pointer hover:scale-[1.01] active:scale-95 transition-all relative overflow-hidden group"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-accent/5 to-transparent opacity-50" />
+                                <div className="flex justify-between items-center mb-4 relative z-10">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">Active Order</h3>
+                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                                    </div>
+                                    <div className="bg-accent/10 text-accent p-1.5 rounded-lg group-hover:bg-accent group-hover:text-white transition-colors">
+                                        <ArrowRight size={12} strokeWidth={3} />
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-between items-center relative z-10 px-2">
+                                    {/* Background Track */}
+                                    <div className="absolute top-3 left-4 right-4 h-0.5 bg-slate-100 -translate-y-1/2 rounded-full z-0" />
+                                    
+                                    {/* Active Progress */}
+                                    <div 
+                                        className="absolute top-3 left-4 h-0.5 bg-accent -translate-y-1/2 rounded-full z-0 transition-all duration-1000 ease-in-out"
+                                        style={{ 
+                                            width: orderConfirmed.status === 'new' ? '0%' : 
+                                                   orderConfirmed.status === 'preparing' ? '33%' : 
+                                                   orderConfirmed.status === 'ready' ? '66%' : '100%' 
+                                        }} 
+                                    />
+
+                                    {[
+                                        { id: 'new', icon: CheckCircle, label: 'Conf' },
+                                        { id: 'preparing', icon: ChefHat, label: 'Prep' },
+                                        { id: 'ready', icon: Sparkles, label: 'Ready' },
+                                        { id: 'delivered', icon: MapPin, label: 'Srvd' }
+                                    ].map((s, index) => {
+                                        const statusOrder = ['new', 'preparing', 'ready', 'delivered'];
+                                        const currentIndex = statusOrder.indexOf(orderConfirmed.status || 'new');
+                                        const isCompleted = index <= currentIndex;
+                                        const isCurrent = index === currentIndex;
+                                        const Icon = s.icon;
+                                        
+                                        return (
+                                            <div key={s.id} className="relative z-10 flex flex-col items-center gap-1.5">
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500 border-[1.5px] bg-white ${isCompleted ? 'border-accent text-accent shadow-md shadow-accent/20 scale-110' : 'border-slate-200 text-slate-300'}`}>
+                                                    <Icon size={10} className={isCurrent && orderConfirmed.status !== 'delivered' ? 'animate-pulse' : ''} />
+                                                </div>
+                                                <span className={`text-[7px] font-bold uppercase tracking-wider ${isCompleted ? 'text-accent' : 'text-slate-300'}`}>{s.label}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         {step === 1 && (
                             <div className="flex flex-col lg:flex-row gap-6">
                                 {/* Compact Categories */}
@@ -757,10 +812,7 @@ const QROrderFlow = () => {
                                         settings={restaurantInfo} 
                                         onClose={() => {
                                             setCart({});
-                                            setOrderConfirmed(null);
                                             localStorage.removeItem('qr_cart_data');
-                                            localStorage.removeItem('qr_current_step');
-                                            localStorage.removeItem('qr_last_order');
                                             setStep(1);
                                         }} 
                                         actionType="download"
