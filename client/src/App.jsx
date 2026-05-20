@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/app/AppLayout";
+import ErrorBoundary from "@/utils/ErrorBoundary";
 const POS = React.lazy(() => import("./pages/POS"));
 const Tables = React.lazy(() => import("./pages/Tables"));
 const Inventory = React.lazy(() => import("./pages/Inventory"));
@@ -30,46 +31,48 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center text-accent"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div></div>}>
-          <Routes>
-            {/* Public Route */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/order" element={<QROrderFlow />} />
-          <Route path="/order/status/:orderNumber" element={<QROrderFlow />} />
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center text-accent"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div></div>}>
+            <Routes>
+              {/* Public Route */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/order" element={<QROrderFlow />} />
+            <Route path="/order/status/:orderNumber" element={<QROrderFlow />} />
 
-        {/* Protected Routes */}
-        
-    
-        <Route
-          path="/*"
-          element={
-            <ProtectedAdminRoute>
-              <Routes>
-                  <Route element={<AppLayout />}>
-                    <Route path="/" element={<POS />} />
-                    <Route path="/tables" element={<Tables />} />
-                    <Route path="/inventory" element={<Inventory />} />
-                    <Route path="/menu" element={<MenuKDS />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/qr-builder" element={<QRBuilder />} />
-                    <Route path="/self-orders" element={<SelfOrders />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </ProtectedAdminRoute>
-            }
-          />
-        </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+          {/* Protected Routes */}
+          
+      
+          <Route
+            path="/*"
+            element={
+              <ProtectedAdminRoute>
+                <Routes>
+                    <Route element={<AppLayout />}>
+                      <Route path="/" element={<POS />} />
+                      <Route path="/tables" element={<Tables />} />
+                      <Route path="/inventory" element={<Inventory />} />
+                      <Route path="/menu" element={<MenuKDS />} />
+                      <Route path="/reports" element={<Reports />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/qr-builder" element={<QRBuilder />} />
+                      <Route path="/self-orders" element={<SelfOrders />} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </ProtectedAdminRoute>
+              }
+            />
+          </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
