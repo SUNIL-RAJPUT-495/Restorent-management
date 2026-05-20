@@ -98,7 +98,7 @@ const QRCart = () => {
             </div>
 
             {/* Sticky Bottom CTA for Mobile */}
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-[100] animate-in slide-in-from-bottom-full duration-500">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 z-[100] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] animate-in slide-in-from-bottom-full duration-500">
                 <div className="max-w-xl mx-auto">
                     <button
                         onClick={() => preSelectedTable ? setStep(4) : setStep(3)}

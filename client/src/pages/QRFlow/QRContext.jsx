@@ -45,6 +45,19 @@ export const QRProvider = ({ children }) => {
         return saved ? JSON.parse(saved) : null;
     });
     const [feedback, setFeedback] = useState({ rating: 0, comment: '' });
+    const [promoModalOpen, setPromoModalOpen] = useState(false);
+
+    const clearOrderFlow = () => {
+        setCart({});
+        setOrderConfirmed(null);
+        setSelectedTable(null);
+        setFeedback({ rating: 0, comment: '' });
+        setPromoModalOpen(false);
+        setStep(0);
+        localStorage.removeItem('qr_cart_data');
+        localStorage.removeItem('qr_last_order');
+        localStorage.removeItem('qr_current_step');
+    };
 
     // React Query for API Data
     const { data: menu = [], isLoading: isMenuLoading } = useQuery({
@@ -127,6 +140,10 @@ export const QRProvider = ({ children }) => {
                     if (prev && prev.orderNumber === updatedOrder.orderNumber) {
                         localStorage.setItem('qr_last_order', JSON.stringify(updatedOrder));
                         if (updatedOrder.status === 'delivered') {
+                            if (step === 1) {
+                                clearOrderFlow();
+                                return null;
+                            }
                             setTimeout(() => setStep(6), 2000);
                         }
                         return updatedOrder;
@@ -195,6 +212,7 @@ export const QRProvider = ({ children }) => {
             paymentMethod, setPaymentMethod,
             orderConfirmed, setOrderConfirmed,
             feedback, setFeedback,
+            promoModalOpen, setPromoModalOpen,
             resetFlow, startNewOrder
         }}>
             {children}

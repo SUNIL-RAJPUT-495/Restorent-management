@@ -11,7 +11,26 @@ import QRSuccess from './QRSuccess';
 import QRFeedback from './QRFeedback';
 
 const QRLayout = () => {
-    const { step, setStep, cartCount, cartTotal, restaurantInfo, preSelectedTable } = useQRContext();
+    const { step, setStep, cartCount, cartTotal, restaurantInfo, preSelectedTable, promoModalOpen } = useQRContext();
+
+    useEffect(() => {
+        const showBar = step === 1 && cartCount > 0 && !promoModalOpen;
+        // #region agent log
+        fetch('http://127.0.0.1:7791/ingest/eae95dce-fe21-44c4-8d93-dcd008b62678', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'edcefc' },
+            body: JSON.stringify({
+                sessionId: 'edcefc',
+                location: 'QRFlow/index.jsx:floating-cart',
+                message: 'floating_cart_visibility',
+                data: { showBar, step, cartCount, promoModalOpen },
+                hypothesisId: 'H_HIDE',
+                timestamp: Date.now(),
+                runId: 'post-hide-with-modal',
+            }),
+        }).catch(() => {});
+        // #endregion
+    }, [step, cartCount, promoModalOpen]);
 
     useEffect(() => {
         if (step === 3 && preSelectedTable) {
@@ -87,22 +106,28 @@ const QRLayout = () => {
                         </AnimatePresence>
 
                         {/* Floating Cart Bar (Mobile) */}
-                        {step === 1 && cartCount > 0 && (
-                            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-md z-50">
+                        {step === 1 && cartCount > 0 && !promoModalOpen && (
+                            <div
+                                className="fixed left-1/2 bottom-0 z-[60] w-full max-w-xs -translate-x-1/2 px-3 pt-1"
+                                style={{
+                                    paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
+                                }}
+                            >
                                 <button
+                                    type="button"
                                     onClick={() => setStep(2)}
-                                    className="w-full bg-accent text-white rounded-2xl p-3 font-black shadow-2xl shadow-accent/30 flex items-center justify-between"
+                                    className="w-full min-h-[40px] bg-accent text-white rounded-lg py-2 px-2.5 font-bold shadow-md shadow-accent/20 flex items-center justify-between gap-2 active:scale-[0.99] transition-transform"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="relative">
-                                            <ShoppingCart size={24} />
-                                            <span className="absolute -top-2 -right-2 bg-white text-accent w-5 h-5 rounded-full border-2 border-orange-300 text-[8px] flex items-center justify-center font-black">{cartCount}</span>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <div className="relative shrink-0">
+                                            <ShoppingCart size={16} strokeWidth={2.25} className="opacity-95" />
+                                            <span className="absolute -top-1 -right-1 bg-white text-accent min-w-[0.875rem] h-3.5 px-0.5 rounded-full border border-accent/25 text-[6px] flex items-center justify-center font-black leading-none">{cartCount}</span>
                                         </div>
-                                        <span className="text-sm uppercase tracking-widest italic">View Cart</span>
+                                        <span className="text-[10px] uppercase tracking-wide font-black truncate">View cart</span>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xl font-black italic tracking-tighter">₹{cartTotal.toFixed(2)}</span>
-                                        <ArrowRight size={20} strokeWidth={3} />
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <span className="text-sm font-black italic tabular-nums tracking-tight">₹{cartTotal.toFixed(2)}</span>
+                                        <ArrowRight size={14} strokeWidth={2.5} className="opacity-90 shrink-0" />
                                     </div>
                                 </button>
                             </div>

@@ -23,6 +23,10 @@ const productSchema = new mongoose.Schema({
   image: {
     type: String,
   },
+  promotion: {
+    type: Boolean,
+    default: false,
+  },
   available: {
     type: Boolean,
     default: true,

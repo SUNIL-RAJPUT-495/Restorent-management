@@ -9,9 +9,18 @@ export const getProducts = async (req, res) => {
   }
 };
 
+const normalizeBoolean = (value) => {
+  return value === true || value === "true";
+};
+
 export const addProduct = async (req, res) => {
   try {
-    const product = new Product(req.body);
+    const productData = {
+      ...req.body,
+      promotion: normalizeBoolean(req.body.promotion),
+      available: normalizeBoolean(req.body.available) ?? true,
+    };
+    const product = new Product(productData);
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
   } catch (error) {
@@ -21,7 +30,14 @@ export const addProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+    if (updateData.promotion !== undefined) {
+      updateData.promotion = normalizeBoolean(updateData.promotion);
+    }
+    if (updateData.available !== undefined) {
+      updateData.available = normalizeBoolean(updateData.available);
+    }
+    const product = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     if (product) {
       res.json(product);
     } else {

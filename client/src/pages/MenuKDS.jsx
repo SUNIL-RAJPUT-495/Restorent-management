@@ -51,6 +51,7 @@ const emptyDraft = () => ({
   price: "",
   cost: "",
   available: true,
+  promotion: false,
   image: "",
   recipe: [],
 });
@@ -165,6 +166,11 @@ const MenuKDS = () => {
     toast(available ? "Item enabled" : "Item disabled");
   };
 
+  const togglePromotion = (id, promotion) => {
+    productMutation.mutate({ id, data: { promotion } });
+    toast(promotion ? "Promotion enabled" : "Promotion disabled");
+  };
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(emptyDraft());
@@ -177,7 +183,10 @@ const MenuKDS = () => {
   const openEdit = (m) => {
     setEditingId(m._id || m.id);
     const { _id, id, createdAt, updatedAt, __v, ...rest } = m;
-    setDraft(rest);
+    setDraft({
+      ...rest,
+      promotion: rest.promotion ?? false,
+    });
     setDialogOpen(true);
   };
   const saveDraft = () => {
@@ -189,6 +198,7 @@ const MenuKDS = () => {
       id: editingId, 
       data: {
         ...draft,
+        promotion: !!draft.promotion,
         price: Number(draft.price) || 0,
         cost: Number(draft.cost) || 0
       }
@@ -345,6 +355,18 @@ const MenuKDS = () => {
                       }
                     />
                   </div>
+                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                    <Label htmlFor="m-promo" className="cursor-pointer">
+                      Make as promotion
+                    </Label>
+                    <Switch
+                      id="m-promo"
+                      checked={draft.promotion}
+                      onCheckedChange={(v) =>
+                        setDraft({ ...draft, promotion: v })
+                      }
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button
@@ -372,6 +394,7 @@ const MenuKDS = () => {
                   <TableHead>Category</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Cost</TableHead>
+                  <TableHead>Promotion</TableHead>
                   <TableHead>Available</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -407,6 +430,17 @@ const MenuKDS = () => {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       ₹{m.cost.toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={m.promotion}
+                          onCheckedChange={(value) => togglePromotion(m._id, value)}
+                        />
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600">
+                          {m.promotion ? 'Promo' : 'No'}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Switch
