@@ -1,4 +1,4 @@
-export const baseURL = "http://backend.bhukhabhukhi.com";
+export const baseURL = "https://restorent-management-g7de.vercel.app";
 
 const SummaryApi = {
    //app

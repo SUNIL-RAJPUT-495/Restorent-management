@@ -29,6 +29,7 @@ app.use(cors({
         // Define allowed domains or patterns
         const allowedOrigins = [
             'http://localhost:8080',
+            'https://restorent-management-eight.vercel.app',
             process.env.FRONTEND_URL,
             'https://bhukhabhukhi.com'
         ].filter(Boolean);
