@@ -37,9 +37,30 @@ const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print
   };
 
   return (
-    <div className="flex flex-col h-full bg-white text-slate-900 w-full max-w-sm mx-auto">
+    <div className="flex flex-col h-full bg-white text-slate-900 w-full max-w-sm mx-auto overflow-hidden">
       {/* Scrollable Container */}
-      <div className="overflow-y-auto no-scrollbar flex-1 bg-white">
+      <div 
+        className="overflow-y-auto flex-1 bg-white custom-scrollbar-hide"
+        style={{ 
+          maxHeight: '75vh',
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
+        <style>
+          {`
+            .custom-scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+            @media print {
+              .custom-scrollbar-hide {
+                overflow: visible !important;
+                max-height: none !important;
+              }
+            }
+          `}
+        </style>
         {/* Receipt Body — to capture */}
         <div ref={receiptRef} className="font-mono text-xs p-4 print:p-0 bg-white min-h-max w-full">
           {/* Header */}

@@ -1,4 +1,4 @@
-export const baseURL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "https://restorent-management-g7de.vercel.app");
+export const baseURL = "http://backend.bhukhabhukhi.com";
 
 const SummaryApi = {
    //app
@@ -39,5 +39,6 @@ const SummaryApi = {
     // Public Feedback
     submitFeedback: { url: baseURL + "/api/public/feedback", method: "post" }
 }
+
 
 export default SummaryApi

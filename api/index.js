@@ -29,9 +29,9 @@ app.use(cors({
         // Define allowed domains or patterns
         const allowedOrigins = [
             'http://localhost:8080',
-            'https://restorent-management-eight.vercel.app',
-            /^https:\/\/restorent-management-services-[a-z0-9-]+\.vercel\.app$/i
-        ];
+            process.env.FRONTEND_URL,
+            'https://bhukhabhukhi.com'
+        ].filter(Boolean);
 
         // Check if origin matches allowed domains
         const isAllowed = allowedOrigins.some(allowedOrigin => {

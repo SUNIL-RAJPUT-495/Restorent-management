@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ShoppingCart, ArrowLeft, ChefHat, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRProvider, useQRContext } from './QRContext';
@@ -12,6 +12,12 @@ import QRFeedback from './QRFeedback';
 
 const QRLayout = () => {
     const { step, setStep, cartCount, cartTotal, restaurantInfo, preSelectedTable } = useQRContext();
+
+    useEffect(() => {
+        if (step === 3 && preSelectedTable) {
+            setStep(4);
+        }
+    }, [step, preSelectedTable, setStep]);
 
     const pageVariants = {
         initial: { opacity: 0, y: 20 },

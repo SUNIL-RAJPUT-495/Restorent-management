@@ -56,7 +56,7 @@ export const getMenu = async (req, res) => {
  */
 export const getTables = async (req, res) => {
   try {
-    const tables = await Table.find({});
+    const tables = await Table.find({}).sort({ number: 1 });
     res.json(tables);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -84,7 +84,7 @@ export const placeOrder = async (req, res) => {
       customerPhone,
       customerEmail,
       source: 'self-order',
-      paymentStatus: paymentMethod === 'cash' ? 'completed' : 'pending',
+      paymentStatus: 'pending',
     });
 
     const createdOrder = await order.save();
@@ -93,11 +93,12 @@ export const placeOrder = async (req, res) => {
     if (tableNumber) {
       await Table.findOneAndUpdate(
         { number: tableNumber },
-        { 
+        {
           status: 'occupied',
-          $set: { guests: guests || 1 },
-          $setOnInsert: { occupiedSince: new Date() }
-        }
+          guests: guests || 1,
+          occupiedSince: new Date(),
+        },
+        { new: true }
       );
     }
 
@@ -202,11 +203,12 @@ export const createImbOrder = async (req, res) => {
     if (tableNumber) {
       await Table.findOneAndUpdate(
         { number: tableNumber },
-        { 
+        {
           status: 'occupied',
-          $set: { guests: guests || 1 },
-          $setOnInsert: { occupiedSince: new Date() }
-        }
+          guests: guests || 1,
+          occupiedSince: new Date(),
+        },
+        { new: true }
       );
     }
 

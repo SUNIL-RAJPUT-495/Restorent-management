@@ -202,7 +202,8 @@ const POS = () => {
       menuItems.filter(
         (m) =>
           (activeCat === "All" || m.category === activeCat) &&
-          m.name.toLowerCase().includes(query.toLowerCase()),
+          m.name.toLowerCase().includes(query.toLowerCase()) &&
+          m.available !== false,
       ),
     [activeCat, query, menuItems],
   );

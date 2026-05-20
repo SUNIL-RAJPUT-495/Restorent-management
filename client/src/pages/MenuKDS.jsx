@@ -48,8 +48,8 @@ const CATEGORIES = ["Starters", "Main Course", "Drinks", "Desserts"];
 const emptyDraft = () => ({
   name: "",
   category: "Main Course",
-  price: 0,
-  cost: 0,
+  price: "",
+  cost: "",
   available: true,
   image: "",
   recipe: [],
@@ -187,7 +187,11 @@ const MenuKDS = () => {
     }
     productMutation.mutate({ 
       id: editingId, 
-      data: draft
+      data: {
+        ...draft,
+        price: Number(draft.price) || 0,
+        cost: Number(draft.cost) || 0
+      }
     });
   };
   const deleteItem = async (id) => {
@@ -221,7 +225,6 @@ const MenuKDS = () => {
       <TabsList className="bg-card shadow-soft">
         <TabsTrigger value="menu">Menu Editor</TabsTrigger>
         <TabsTrigger value="kds">Kitchen Display</TabsTrigger>
-        <TabsTrigger value="promos">Promotions</TabsTrigger>
       </TabsList>
 
       <TabsContent value="menu" className="mt-4">
@@ -291,7 +294,7 @@ const MenuKDS = () => {
                         step="0.5"
                         value={draft.price}
                         onChange={(e) =>
-                          setDraft({ ...draft, price: +e.target.value })
+                          setDraft({ ...draft, price: e.target.value })
                         }
                       />
                     </div>
@@ -303,7 +306,7 @@ const MenuKDS = () => {
                         step="0.1"
                         value={draft.cost}
                         onChange={(e) =>
-                          setDraft({ ...draft, cost: +e.target.value })
+                          setDraft({ ...draft, cost: e.target.value })
                         }
                       />
                     </div>
@@ -518,45 +521,7 @@ const MenuKDS = () => {
         </div>
       </TabsContent>
 
-      <TabsContent value="promos" className="mt-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            {
-              name: "Happy Hour",
-              desc: "20% off all drinks · 4–6 PM",
-              active: true,
-            },
-            {
-              name: "Weekend Brunch",
-              desc: "Set menu ₹24 · Sat–Sun",
-              active: true,
-            },
-            {
-              name: "Seasonal — Summer",
-              desc: "Citrus specials menu",
-              active: false,
-            },
-          ].map((p) => (
-            <div
-              key={p.name}
-              className="rounded-2xl border border-border bg-card p-5 shadow-soft"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
-                    <Tag className="h-3.5 w-3.5" /> Promotion
-                  </p>
-                  <p className="mt-1 text-base font-bold text-primary">
-                    {p.name}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">{p.desc}</p>
-                </div>
-                <Switch defaultChecked={p.active} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </TabsContent>
+      
     </Tabs>
   );
 };

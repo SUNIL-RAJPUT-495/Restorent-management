@@ -8,7 +8,8 @@ const QRMenu = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const categories = useMemo(() => {
-        const cats = ['All', ...new Set(menu.map(item => item.category))];
+        const availableItems = menu.filter(item => item.available !== false);
+        const cats = ['All', ...new Set(availableItems.map(item => item.category))];
         return cats;
     }, [menu]);
 
@@ -16,7 +17,8 @@ const QRMenu = () => {
         return menu.filter(item => {
             const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
             const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesCategory && matchesSearch;
+            const isAvailable = item.available !== false;
+            return matchesCategory && matchesSearch && isAvailable;
         });
     }, [menu, activeCategory, searchQuery]);
 

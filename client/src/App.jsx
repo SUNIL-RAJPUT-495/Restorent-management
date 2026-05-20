@@ -43,6 +43,8 @@ const App = () => (
           <Route path="/order/status/:orderNumber" element={<QROrderFlow />} />
 
         {/* Protected Routes */}
+        
+    
         <Route
           path="/*"
           element={

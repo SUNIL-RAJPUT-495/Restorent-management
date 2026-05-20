@@ -24,11 +24,12 @@ export const createOrder = async (req, res) => {
     if (tableNumber) {
       await Table.findOneAndUpdate(
         { number: tableNumber },
-        { 
+        {
           status: 'occupied',
-          $set: { guests: req.body.guests || 1 },
-          $setOnInsert: { occupiedSince: new Date() }
-        }
+          guests: req.body.guests || 1,
+          occupiedSince: new Date(),
+        },
+        { new: true }
       );
     }
 
@@ -57,10 +58,19 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (order) {
-      order.status = req.body.status || order.status;
       if (req.body.items) order.items = req.body.items;
-      if (req.body.totalAmount) order.totalAmount = req.body.totalAmount;
+      if (req.body.paymentStatus) {
+        console.log(`Order ${req.params.id}: paymentStatus update requested -> ${req.body.paymentStatus}`);
+        order.paymentStatus = req.body.paymentStatus;
+        // Keep order.status unchanged when payment status is toggled.
+        // Only explicit status updates should change the order workflow state.
+      }
+      if (req.body.status) {
+        order.status = req.body.status;
+      }
+
       const updatedOrder = await order.save();
+      console.log(`Order ${req.params.id}: updated paymentStatus = ${updatedOrder.paymentStatus}, status = ${updatedOrder.status}`);
 
       // Automatically mark table as occupied if an order gets active again
       if (order.tableNumber && ['new', 'preparing', 'ready'].includes(updatedOrder.status)) {
