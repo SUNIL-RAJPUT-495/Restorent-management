@@ -4,6 +4,7 @@ import Order from '../models/Order.js';
 import Setting from '../models/Setting.js';
 import Feedback from '../models/Feedback.js';
 import PromoBanner from '../models/PromoBanner.js';
+import { getFullImageUrl } from '../utils/imageUrl.js';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import axios from 'axios';
@@ -28,7 +29,7 @@ export const getRestaurantInfo = async (req, res) => {
     
     res.json({
       restaurantName: settings.restaurantName,
-      logo: settings.logo,
+      logo: getFullImageUrl(req, settings.logo),
       address: settings.address,
       contact: settings.contact,
       currency: settings.currency || '₹',
@@ -46,7 +47,12 @@ export const getRestaurantInfo = async (req, res) => {
 export const getMenu = async (req, res) => {
   try {
     const products = await Product.find({ available: true });
-    res.json(products);
+    const formatted = products.map(p => {
+      const doc = p.toObject();
+      doc.image = getFullImageUrl(req, doc.image);
+      return doc;
+    });
+    res.json(formatted);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -58,7 +64,15 @@ export const getMenu = async (req, res) => {
 export const getActivePromotions = async (req, res) => {
   try {
     const promos = await PromoBanner.find({ active: true }).populate('productId');
-    res.json(promos);
+    const formatted = promos.map(p => {
+      const doc = p.toObject();
+      doc.image = getFullImageUrl(req, doc.image);
+      if (doc.productId && doc.productId.image) {
+        doc.productId.image = getFullImageUrl(req, doc.productId.image);
+      }
+      return doc;
+    });
+    res.json(formatted);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

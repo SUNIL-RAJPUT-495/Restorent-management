@@ -1,5 +1,6 @@
 import Setting from '../models/Setting.js';
 import Admin from '../models/Admin.js';
+import { getFullImageUrl, deleteImageFile } from '../utils/imageUrl.js';
 
 // GET /api/settings — fetch the one-and-only settings document
 export const getSettings = async (req, res) => {
@@ -28,7 +29,9 @@ export const getSettings = async (req, res) => {
       }
     }
     
-    res.json(settings);
+    const doc = settings.toObject();
+    doc.logo = getFullImageUrl(req, doc.logo);
+    res.json(doc);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -41,6 +44,9 @@ export const updateSettings = async (req, res) => {
     const settingsData = { ...req.body };
 
     if (req.file) {
+      if (settings && settings.logo) {
+        deleteImageFile(settings.logo);
+      }
       settingsData.logo = `/uploads/${req.file.filename}`;
     }
 
@@ -58,7 +64,10 @@ export const updateSettings = async (req, res) => {
       Object.assign(settings, settingsData);
     }
     const saved = await settings.save();
-    res.json(saved);
+    
+    const doc = saved.toObject();
+    doc.logo = getFullImageUrl(req, doc.logo);
+    res.json(doc);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
