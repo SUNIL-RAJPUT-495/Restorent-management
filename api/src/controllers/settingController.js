@@ -38,10 +38,24 @@ export const getSettings = async (req, res) => {
 export const updateSettings = async (req, res) => {
   try {
     let settings = await Setting.findOne({});
+    const settingsData = { ...req.body };
+
+    if (req.file) {
+      settingsData.logo = `/uploads/${req.file.filename}`;
+    }
+
+    // Cast cgst and sgst from string to Number if present
+    if (settingsData.cgst !== undefined) {
+      settingsData.cgst = parseFloat(settingsData.cgst) || 0;
+    }
+    if (settingsData.sgst !== undefined) {
+      settingsData.sgst = parseFloat(settingsData.sgst) || 0;
+    }
+
     if (!settings) {
-      settings = new Setting(req.body);
+      settings = new Setting(settingsData);
     } else {
-      Object.assign(settings, req.body);
+      Object.assign(settings, settingsData);
     }
     const saved = await settings.save();
     res.json(saved);

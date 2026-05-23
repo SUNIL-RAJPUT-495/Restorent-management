@@ -3,6 +3,7 @@ import Table from '../models/Table.js';
 import Order from '../models/Order.js';
 import Setting from '../models/Setting.js';
 import Feedback from '../models/Feedback.js';
+import PromoBanner from '../models/PromoBanner.js';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import axios from 'axios';
@@ -46,6 +47,18 @@ export const getMenu = async (req, res) => {
   try {
     const products = await Product.find({ available: true });
     res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Fetch all active promotion banners
+ */
+export const getActivePromotions = async (req, res) => {
+  try {
+    const promos = await PromoBanner.find({ active: true }).populate('productId');
+    res.json(promos);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

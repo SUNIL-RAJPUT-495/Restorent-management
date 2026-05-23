@@ -16,16 +16,16 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  originalPrice: {
+    type: Number,
+    default: 0,
+  },
   cost: {
     type: Number,
     default: 0,
   },
   image: {
     type: String,
-  },
-  promotion: {
-    type: Boolean,
-    default: false,
   },
   available: {
     type: Boolean,

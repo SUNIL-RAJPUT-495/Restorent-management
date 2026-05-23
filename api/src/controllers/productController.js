@@ -17,9 +17,21 @@ export const addProduct = async (req, res) => {
   try {
     const productData = {
       ...req.body,
-      promotion: normalizeBoolean(req.body.promotion),
-      available: normalizeBoolean(req.body.available) ?? true,
+      available: req.body.available !== undefined ? normalizeBoolean(req.body.available) : true,
     };
+    
+    if (req.file) {
+      productData.image = `/uploads/${req.file.filename}`;
+    }
+
+    if (typeof productData.recipe === 'string') {
+      try {
+        productData.recipe = JSON.parse(productData.recipe);
+      } catch (e) {
+        console.error("Failed to parse recipe JSON:", e);
+      }
+    }
+
     const product = new Product(productData);
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
@@ -31,12 +43,22 @@ export const addProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const updateData = { ...req.body };
-    if (updateData.promotion !== undefined) {
-      updateData.promotion = normalizeBoolean(updateData.promotion);
-    }
     if (updateData.available !== undefined) {
       updateData.available = normalizeBoolean(updateData.available);
     }
+    
+    if (req.file) {
+      updateData.image = `/uploads/${req.file.filename}`;
+    }
+
+    if (typeof updateData.recipe === 'string') {
+      try {
+        updateData.recipe = JSON.parse(updateData.recipe);
+      } catch (e) {
+        console.error("Failed to parse recipe JSON:", e);
+      }
+    }
+
     const product = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     if (product) {
       res.json(product);

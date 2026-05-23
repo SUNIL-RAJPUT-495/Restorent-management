@@ -5,6 +5,7 @@ import connectDB from './src/config/db.js';
 import morgan from 'morgan';
 import { Server } from 'socket.io';
 import http from 'http';
+import fs from 'fs';
 
 // Route imports
 import authRoutes from './src/routes/authRoutes.js';
@@ -13,6 +14,7 @@ import orderRoutes from './src/routes/orderRoutes.js';
 import tableRoutes from './src/routes/tableRoutes.js';
 import ingredientRoutes from './src/routes/ingredientRoutes.js';
 import settingRoutes from './src/routes/settingRoutes.js';
+import promotionRoutes from './src/routes/promotionRoutes.js';
 
 import publicRoutes from './src/routes/publicRoutes.js';
 
@@ -21,6 +23,12 @@ dotenv.config();
 connectDB();
 
 const app = express();
+
+// Ensure uploads folder exists on startup
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads', { recursive: true });
+}
+app.use('/uploads', express.static('uploads'));
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
@@ -62,6 +70,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 app.use('/api/settings', settingRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 app.use('/api/public', publicRoutes);
 

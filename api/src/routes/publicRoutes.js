@@ -9,7 +9,8 @@ import {
   verifyImbPayment,
   imbWebhook,
   getRestaurantInfo,
-  submitFeedback
+  submitFeedback,
+  getActivePromotions
 } from '../controllers/publicController.js';
 
 const router = express.Router();
@@ -18,6 +19,7 @@ const router = express.Router();
 router.get('/info', getRestaurantInfo);
 router.get('/menu', getMenu);
 router.get('/tables', getTables);
+router.get('/promotions', getActivePromotions);
 router.post('/order', placeOrder);
 
 // Payment Routes
