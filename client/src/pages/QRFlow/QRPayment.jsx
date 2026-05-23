@@ -7,9 +7,15 @@ import { toast } from 'sonner';
 
 const QRPayment = () => {
     const { 
-        selectedTable, cartCount, cartTotal, paymentMethod, setPaymentMethod, 
+        selectedTable, cartCount, cartTotal, cartSubtotal, paymentMethod, setPaymentMethod, 
         cartItems, customerInfo, setOrderConfirmed, setStep, restaurantInfo, resetFlow
     } = useQRContext();
+
+    const cartOriginalSubtotal = cartItems.reduce((acc, item) => {
+        const originalPrice = item.product.originalPrice || item.product.price;
+        return acc + (originalPrice * item.qty);
+    }, 0);
+    const totalDiscount = cartOriginalSubtotal - cartSubtotal;
 
     const handlePlaceOrder = async () => {
         const toastId = toast.loading("Processing your order...");
@@ -19,6 +25,7 @@ const QRPayment = () => {
                     productId: item.product._id,
                     name: item.product.name,
                     price: item.product.price,
+                    originalPrice: item.product.originalPrice || item.product.price,
                     qty: item.qty
                 })),
                 type: 'qsr',
@@ -106,12 +113,20 @@ const QRPayment = () => {
                     <ChefHat size={80} />
                 </div>
                 
-                <div className="space-y-0.5 relative z-10">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Payable Amount</p>
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black text-slate-900 tracking-tighter">₹{cartTotal.toFixed(2)}</span>
-                        <span className="text-[8px] font-bold text-green-500 uppercase tracking-widest italic">Incl. Taxes</span>
+                <div className="flex justify-between items-start relative z-10">
+                    <div className="space-y-0.5">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Payable Amount</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-black text-slate-900 tracking-tighter">₹{cartTotal.toFixed(2)}</span>
+                            <span className="text-[8px] font-bold text-green-500 uppercase tracking-widest italic">Incl. Taxes</span>
+                        </div>
                     </div>
+                    {totalDiscount > 0 && (
+                        <div className="bg-emerald-550 text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100/80 text-[10px] font-black uppercase tracking-wider text-right shadow-sm shadow-emerald-100/10">
+                            <span className="block text-[8px] text-emerald-500 font-bold tracking-widest">SAVED</span>
+                            ₹{totalDiscount.toFixed(2)}
+                        </div>
+                    )}
                 </div>
 
                 <button

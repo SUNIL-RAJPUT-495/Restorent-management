@@ -56,9 +56,9 @@ const QRLayout = () => {
 
             {step > 0 && (
                 <>
-                    <header className="bg-white sticky top-0 z-50 px-6 py-4 border-b border-slate-100 shadow-sm">
+                    <header className="bg-white sticky top-0 z-50 px-5 py-2.5 border-b border-slate-100 shadow-sm">
                         <div className="max-w-7xl mx-auto flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2.5">
                                 {step > 1 && step < 5 && (
                                     <button onClick={() => {
                                         if (step === 4 && preSelectedTable) setStep(2);
@@ -67,18 +67,18 @@ const QRLayout = () => {
                                         <ArrowLeft size={18} />
                                     </button>
                                 )}
-                                <h1 className="text-lg font-black tracking-tighter text-slate-900 uppercase">
+                                <h1 className="text-base font-black tracking-tighter text-slate-900 uppercase">
                                     {step === 5 ? 'Order Token' : (restaurantInfo?.restaurantName || 'Menu')}
                                 </h1>
                             </div>
 
                             <button
-                                className="relative w-10 h-10 bg-accent text-white rounded-xl flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-accent/20"
+                                className="relative w-9 h-9 bg-accent text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-accent/20"
                                 onClick={() => step === 1 && cartCount > 0 && setStep(2)}
                             >
-                                <ShoppingCart size={18} />
+                                <ShoppingCart size={16} />
                                 {cartCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 bg-white text-accent text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-accent animate-in zoom-in duration-300">
+                                    <span className="absolute -top-1.5 -right-1.5 bg-white text-accent text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-[1.5px] border-accent animate-in zoom-in duration-300">
                                         {cartCount}
                                     </span>
                                 )}

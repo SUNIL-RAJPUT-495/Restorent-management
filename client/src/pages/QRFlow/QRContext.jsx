@@ -60,14 +60,104 @@ export const QRProvider = ({ children }) => {
     };
 
     // React Query for API Data
-    const { data: menu = [], isLoading: isMenuLoading } = useQuery({
+    const { data: rawMenu = [], isLoading: isMenuLoading } = useQuery({
         queryKey: ['publicMenu'],
         queryFn: async () => {
             const res = await axios.get(`${baseURL}/api/public/menu`);
             return Array.isArray(res.data) ? res.data : (res.data?.items || []);
         },
-        staleTime: 5 * 60 * 1000,
+        staleTime: 1000,
     });
+
+    const { data: promotions = [], isLoading: isPromotionsLoading } = useQuery({
+        queryKey: ['publicPromotions'],
+        queryFn: async () => {
+            const res = await axios.get(`${baseURL}/api/public/promotions`);
+            return Array.isArray(res.data) ? res.data : [];
+        },
+        staleTime: 1000,
+    });
+
+    // Automatically parse promotion titles to apply FLAT % or flat amount discounts to linked items
+    const menu = useMemo(() => {
+        if (!rawMenu || rawMenu.length === 0) return [];
+        return rawMenu.map(product => {
+            if (!promotions || promotions.length === 0) return product;
+
+            // Find if there is an active promotion linking to this product
+            const promo = promotions.find(p => {
+                if (p.active === false) return false;
+                if (!p.productId) return false;
+                
+                const promoProdId = typeof p.productId === 'object'
+                    ? (p.productId._id || p.productId.id)
+                    : p.productId;
+                
+                const currentProdId = product._id || product.id;
+                
+                return promoProdId && currentProdId && promoProdId.toString().trim() === currentProdId.toString().trim();
+            });
+
+            if (!promo || !promo.title) return product;
+
+            // 1. Parse percentage discount (e.g., "50% OFF", "FLAT 50%", "66%")
+            const percentMatch = promo.title.toString().match(/(\d+)\s*%/);
+            if (percentMatch) {
+                const percent = parseInt(percentMatch[1], 10);
+                if (percent > 0 && percent <= 100) {
+                    const originalPrice = product.originalPrice || product.price;
+                    const discountedPrice = Math.round(originalPrice * (1 - percent / 100));
+                    return {
+                        ...product,
+                        price: discountedPrice,
+                        originalPrice: originalPrice
+                    };
+                }
+            }
+
+            // 2. Parse flat amount discount (e.g., "₹50 OFF", "50 OFF", "Rs 50", "100 rs")
+            const flatMatch = promo.title.toString().match(/(?:₹|Rs\.?|INR)\s*(\d+)/i) || promo.title.toString().match(/(\d+)\s*(?:off|rupees|rs)/i);
+            if (flatMatch) {
+                const flatAmount = parseInt(flatMatch[1], 10);
+                if (flatAmount > 0 && flatAmount < product.price) {
+                    const originalPrice = product.originalPrice || product.price;
+                    const discountedPrice = Math.max(0, originalPrice - flatAmount);
+                    return {
+                        ...product,
+                        price: discountedPrice,
+                        originalPrice: originalPrice
+                    };
+                }
+            }
+
+            // 3. Fallback: Parse plain numbers (e.g., "20", "50", "150")
+            const plainNumberMatch = promo.title.toString().trim().match(/^(\d+)$/);
+            if (plainNumberMatch) {
+                const value = parseInt(plainNumberMatch[1], 10);
+                if (value > 0) {
+                    const originalPrice = product.originalPrice || product.price;
+                    // If the value is <= 100, treat it as percentage discount. Otherwise, treat as flat amount.
+                    if (value <= 100) {
+                        const discountedPrice = Math.round(originalPrice * (1 - value / 100));
+                        return {
+                            ...product,
+                            price: discountedPrice,
+                            originalPrice: originalPrice
+                        };
+                    } else if (value < product.price) {
+                        const discountedPrice = Math.max(0, originalPrice - value);
+                        return {
+                            ...product,
+                            price: discountedPrice,
+                            originalPrice: originalPrice
+                        };
+                    }
+                }
+            }
+
+            return product;
+        });
+    }, [rawMenu, promotions]);
 
     const { data: tables = [], isLoading: isTablesLoading } = useQuery({
         queryKey: ['publicTables'],
@@ -176,7 +266,15 @@ export const QRProvider = ({ children }) => {
         });
     };
 
-    const cartItems = Object.values(cart);
+    const cartItems = useMemo(() => {
+        return Object.values(cart).map(item => {
+            const latestProduct = menu.find(p => (p._id || p.id)?.toString().trim() === (item.product._id || item.product.id)?.toString().trim());
+            return {
+                ...item,
+                product: latestProduct || item.product
+            };
+        });
+    }, [cart, menu]);
     const cartSubtotal = cartItems.reduce((acc, item) => acc + (item.product.price * item.qty), 0);
     const cartCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
@@ -200,13 +298,13 @@ export const QRProvider = ({ children }) => {
         setStep(1); // Go back to menu, preserving orderConfirmed
     };
 
-    const isLoading = isMenuLoading || isTablesLoading || isInfoLoading || isVerifying;
+    const isLoading = isMenuLoading || isTablesLoading || isInfoLoading || isVerifying || isPromotionsLoading;
 
     return (
         <QRContext.Provider value={{
             step, setStep,
             customerInfo, setCustomerInfo,
-            menu, tables, restaurantInfo, isLoading,
+            menu, tables, restaurantInfo, promotions, isLoading,
             cart, addToCart, removeFromCart, cartItems, cartCount, cartTotal, cartSubtotal, cgstAmount, sgstAmount,
             selectedTable, setSelectedTable, preSelectedTable,
             paymentMethod, setPaymentMethod,

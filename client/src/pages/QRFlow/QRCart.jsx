@@ -5,6 +5,12 @@ import { useQRContext } from './QRContext';
 const QRCart = () => {
     const { restaurantInfo, selectedTable, cartItems, removeFromCart, addToCart, setStep, preSelectedTable, cartSubtotal, cartTotal, cgstAmount, sgstAmount } = useQRContext();
 
+    const cartOriginalSubtotal = cartItems.reduce((acc, item) => {
+        const originalPrice = item.product.originalPrice || item.product.price;
+        return acc + (originalPrice * item.qty);
+    }, 0);
+    const totalDiscount = cartOriginalSubtotal - cartSubtotal;
+
     // Guard: if cart is empty, send back to menu
     if (cartItems.length === 0) {
         setStep(1);
@@ -38,7 +44,12 @@ const QRCart = () => {
                                 </div>
                                 <div className="space-y-1">
                                     <h3 className="font-black text-slate-900 text-sm leading-tight">{item.product.name}</h3>
-                                    <p className="text-accent font-black text-xs italic tracking-tighter">₹{item.product.price}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-accent font-black text-xs italic tracking-tighter">₹{item.product.price}</p>
+                                        {item.product.originalPrice && item.product.originalPrice > item.product.price && (
+                                            <span className="text-[10px] text-slate-400 font-bold line-through tracking-tighter">₹{item.product.originalPrice}</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -70,9 +81,15 @@ const QRCart = () => {
                 
                 <div className="space-y-3">
                     <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        <span>Item Total</span>
-                        <span className="text-slate-900 font-black tracking-tighter text-sm">₹{cartSubtotal.toFixed(2)}</span>
+                        <span>Subtotal</span>
+                        <span className="text-slate-900 font-black tracking-tighter text-sm">₹{cartOriginalSubtotal.toFixed(2)}</span>
                     </div>
+                    {totalDiscount > 0 && (
+                        <div className="flex justify-between items-center text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50/50 px-3 py-1.5 rounded-xl border border-emerald-100/50">
+                            <span>Promo Discount</span>
+                            <span className="font-black tracking-tighter text-sm">-₹{totalDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         <span>GST ({(restaurantInfo?.cgst || 0) + (restaurantInfo?.sgst || 0)}%)</span>
                         <span className="text-slate-900 font-black tracking-tighter text-sm">₹{(cgstAmount + sgstAmount).toFixed(2)}</span>

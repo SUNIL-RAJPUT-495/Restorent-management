@@ -8,6 +8,8 @@ const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print
 
   const items = billData.activeOrder.items || [];
   const subtotal = items.reduce((s, i) => s + (i.price * i.qty), 0);
+  const originalSubtotal = items.reduce((s, i) => s + ((i.originalPrice || i.price) * i.qty), 0);
+  const promoDiscount = originalSubtotal - subtotal;
   const cgstRate = (settings?.cgst ?? 2.5) / 100;
   const sgstRate = (settings?.sgst ?? 2.5) / 100;
   const cgst = subtotal * cgstRate;
@@ -126,10 +128,27 @@ const BillReceipt = ({ billData, settings, onClose, onPrint, actionType = 'print
             <span className="text-slate-500">Total Qty</span>
             <span>{totalQty}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500">Subtotal</span>
-            <span>₹{subtotal.toFixed(2)}</span>
-          </div>
+          {promoDiscount > 0 ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Subtotal (Original)</span>
+                <span>₹{originalSubtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-emerald-600">
+                <span className="text-slate-500">Promo Discount</span>
+                <span>-₹{promoDiscount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Subtotal</span>
+                <span>₹{subtotal.toFixed(2)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span className="text-slate-500">Subtotal</span>
+              <span>₹{subtotal.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-slate-500">CGST ({settings?.cgst ?? 2.5}%)</span>
             <span>₹{cgst.toFixed(2)}</span>

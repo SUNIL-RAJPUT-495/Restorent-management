@@ -1,4 +1,7 @@
-export const baseURL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "https://restorent-management-g7de.vercel.app");
+export const baseURL = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'))
+    ? "http://localhost:5000"
+    : "https://backend.bhukhabhukhi.com";
 
 const SummaryApi = {
    //app
@@ -37,7 +40,14 @@ const SummaryApi = {
     updateSettings: { url: baseURL + "/api/settings", method: "put" },
     
     // Public Feedback
-    submitFeedback: { url: baseURL + "/api/public/feedback", method: "post" }
+    submitFeedback: { url: baseURL + "/api/public/feedback", method: "post" },
+
+    // Promotion Banners
+    getPromotions:       { url: baseURL + "/api/promotions",        method: "get"  },
+    addPromotion:        { url: baseURL + "/api/promotions/add",   method: "post" },
+    updatePromotion:     (id) => ({ url: baseURL + `/api/promotions/${id}`, method: "put" }),
+    deletePromotion:     (id) => ({ url: baseURL + `/api/promotions/${id}`, method: "delete" }),
+    getActivePromotions: { url: baseURL + "/api/public/promotions",  method: "get"  }
 }
 
 

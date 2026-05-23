@@ -31,6 +31,51 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+const compressImageFile = (file, maxDimension = 1000, quality = 0.75) => {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      URL.revokeObjectURL(img.src);
+      resolve(compressedBase64);
+    };
+    img.onerror = (err) => {
+      URL.revokeObjectURL(img.src);
+      reject(err);
+    };
+  });
+};
+
+const base64ToBlob = (base64, mimeType = 'image/jpeg') => {
+  const byteString = atob(base64.split(',')[1]);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], { type: mimeType });
+};
+
 const Settings = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("profile");
@@ -132,15 +177,32 @@ const Settings = () => {
   const updateSettingsMutation = useMutation({
     mutationFn: async (data) => {
       let payload = { ...data };
+      const formData = new FormData();
+      let compressedBlob = null;
+
       if (payload.logo instanceof File) {
-        payload.logo = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(payload.logo);
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = error => reject(error);
-        });
+        try {
+          const compressedBase64 = await compressImageFile(payload.logo, 500, 0.75);
+          compressedBlob = base64ToBlob(compressedBase64, 'image/jpeg');
+        } catch (error) {
+          console.error("Logo compression failed, falling back to raw upload:", error);
+          compressedBlob = payload.logo;
+        }
       }
-      const response = await AxiosAdmin.put(SummaryApi.updateSettings.url, payload);
+
+      Object.keys(payload).forEach(key => {
+        if (key === 'logo') {
+          if (compressedBlob) {
+            formData.append('logo', compressedBlob, 'logo.jpg');
+          } else if (typeof payload.logo === 'string') {
+            formData.append('logo', payload.logo);
+          }
+        } else if (payload[key] !== undefined && payload[key] !== null) {
+          formData.append(key, payload[key]);
+        }
+      });
+
+      const response = await AxiosAdmin.put(SummaryApi.updateSettings.url, formData);
       return response.data;
     },
     onSuccess: () => {

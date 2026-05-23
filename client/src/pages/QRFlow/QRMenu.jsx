@@ -1,152 +1,69 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, ChefHat, Plus, Minus, Sparkles } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, ChefHat, Plus, Minus, Sparkles, ArrowRight, CheckCircle, MapPin } from 'lucide-react';
 import { useQRContext } from './QRContext';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
-const PromoProductCard = ({ product, cart, addToCart, removeFromCart, compact, strip }) => (
-    <button
-        type="button"
-        key={product._id}
-        onClick={() => !cart[product._id] && addToCart(product)}
-        className={`group flex flex-col items-center border bg-white text-center transition-all active:scale-[0.98] ${
-            strip
-                ? `min-w-[76px] max-w-[76px] shrink-0 rounded-lg border-slate-200/90 p-1 shadow-none hover:border-slate-300${cart[product._id] ? ' ring-1 ring-inset ring-accent/45' : ''}`
-                : compact
-                    ? `p-2 min-w-[108px] shrink-0 rounded-xl border-accent/15 hover:border-accent/30 hover:shadow-md${cart[product._id] ? ' ring-1 ring-inset ring-accent/45' : ''}`
-                    : `p-3 rounded-2xl border-accent/20 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg${cart[product._id] ? ' ring-1 ring-inset ring-accent/45' : ''}`
-        }`}
-    >
-        <div
-            className={`w-full overflow-hidden flex-shrink-0 bg-slate-50 flex items-center justify-center relative rounded-md ${
-                strip ? 'h-14 mb-0.5' : compact ? 'h-[4.25rem] mb-1 rounded-lg' : 'aspect-square mb-2 rounded-xl'
-            }`}
-        >
-            {product.image ? (
-                <img src={product.image} loading="lazy" alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-                <ChefHat size={strip ? 18 : compact ? 22 : 32} className="text-slate-200" />
-            )}
-            <span
-                className={`absolute rounded bg-accent text-white font-black uppercase shadow-sm ${
-                    strip ? 'top-0.5 left-0.5 text-[6px] px-1 py-px tracking-wide' : 'top-2 left-2 text-[8px] px-1.5 py-0.5 tracking-[0.15em]'
-                }`}
-            >
-                Promo
-            </span>
-        </div>
-        <h3
-            className={`font-bold text-slate-800 truncate w-full px-0.5 leading-tight ${
-                strip ? 'text-[8px] normal-case tracking-tight mt-0.5' : 'text-[10px] font-black uppercase tracking-tight'
-            }`}
-        >
-            {product.name}
-        </h3>
-        <span className={`font-black text-accent ${strip ? 'text-[9px] leading-none mt-0.5' : 'text-xs italic tracking-tighter'}`}>
-            ₹{product.price}
-        </span>
-        <div className={strip ? 'mt-1 w-full' : 'mt-2 w-full'}>
-            {cart[product._id] ? (
-                <div
-                    className={`flex items-center justify-between bg-slate-50 border border-slate-100 ${
-                        strip ? 'rounded-md p-0.5' : 'rounded-lg p-1'
-                    }`}
-                >
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); removeFromCart(product._id); }}
-                        className={`flex items-center justify-center text-slate-400 hover:text-accent hover:bg-white rounded transition-all ${
-                            strip ? 'w-5 h-5' : 'w-6 h-6'
-                        }`}
-                    >
-                        <Minus size={strip ? 8 : 10} strokeWidth={4} />
-                    </button>
-                    <span className={`font-black text-slate-900 tabular-nums ${strip ? 'text-[8px]' : 'text-[10px]'}`}>
-                        {cart[product._id].qty}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-                        className={`flex items-center justify-center text-slate-400 hover:text-accent hover:bg-white rounded transition-all ${
-                            strip ? 'w-5 h-5' : 'w-6 h-6'
-                        }`}
-                    >
-                        <Plus size={strip ? 8 : 10} strokeWidth={4} />
-                    </button>
-                </div>
-            ) : (
-                <div
-                    className={
-                        strip
-                            ? 'w-full py-0.5 rounded font-black bg-accent text-white border border-accent text-[7px] uppercase tracking-wide transition-all'
-                            : 'w-full py-1.5 rounded-lg font-black bg-accent/10 text-accent border border-accent/20 text-[8px] uppercase tracking-widest transition-all group-hover:bg-accent group-hover:text-white group-hover:border-accent'
-                    }
-                >
-                    ADD
-                </div>
-            )}
-        </div>
-    </button>
-);
+
 
 const QRMenu = () => {
-    const { menu, isLoading, cart, addToCart, removeFromCart, setStep, orderConfirmed, setPromoModalOpen } = useQRContext();
+    const { menu, isLoading, cart, addToCart, removeFromCart, setStep, orderConfirmed, promotions } = useQRContext();
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
-    const [showPromoModal, setShowPromoModal] = useState(false);
+    const [currentPromoIdx, setCurrentPromoIdx] = useState(0);
+    const [bannerVisible, setBannerVisible] = useState(true);
 
-    const promotedItems = useMemo(() => {
-        return menu.filter((item) => item.promotion && item.available !== false);
-    }, [menu]);
-
-    const promosInView = useMemo(() => {
-        if (activeCategory === 'All') return promotedItems;
-        return promotedItems.filter((item) => item.category === activeCategory);
-    }, [promotedItems, activeCategory]);
-
-    useEffect(() => {
-        if (isLoading) return;
-        const modalSeen = sessionStorage.getItem('qr_promo_modal_seen') === '1';
-        if (promotedItems.length > 0 && !modalSeen) {
-            setShowPromoModal(true);
+    const handleBannerClick = (promo) => {
+        if (!promo.productId) {
+            toast.info("Special Offer banner!");
+            return;
         }
-    }, [isLoading, promotedItems.length]);
 
-    useEffect(() => {
-        if (!showPromoModal) return;
-        // #region agent log
-        fetch('http://127.0.0.1:7791/ingest/eae95dce-fe21-44c4-8d93-dcd008b62678', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'edcefc' },
-            body: JSON.stringify({
-                sessionId: 'edcefc',
-                location: 'QRMenu.jsx:promo-modal',
-                message: 'promo_modal_open',
-                data: { dialogZ: 110, floatingCartZ: 60, headerZ: 50 },
-                hypothesisId: 'H_STACK',
-                timestamp: Date.now(),
-                runId: 'post-zindex-fix',
-            }),
-        }).catch(() => {});
-        // #endregion
-    }, [showPromoModal]);
-
-    useEffect(() => {
-        setPromoModalOpen(showPromoModal);
-        return () => setPromoModalOpen(false);
-    }, [showPromoModal, setPromoModalOpen]);
-
-    const handlePromoModalChange = (open) => {
-        setShowPromoModal(open);
-        if (!open) {
-            sessionStorage.setItem('qr_promo_modal_seen', '1');
+        const product = typeof promo.productId === 'object' ? promo.productId : menu.find(p => p._id === promo.productId);
+        if (!product) {
+            return;
         }
+
+        // Add to cart
+        addToCart(product);
+        toast.success(`Added ${product.name} to cart! 🍕`, {
+            description: "Promotional Offer applied",
+            icon: <Sparkles className="h-4 w-4 text-accent animate-bounce" />
+        });
+
+        // Scroll to product card and highlight it
+        setTimeout(() => {
+            const element = document.getElementById(`product-card-${product._id}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Flash class
+                element.classList.add('ring-4', 'ring-accent', 'scale-[1.02]');
+                setTimeout(() => {
+                    element.classList.remove('ring-4', 'ring-accent', 'scale-[1.02]');
+                }, 1500);
+            }
+        }, 300);
     };
+
+    useEffect(() => {
+        if (orderConfirmed?.status === 'delivered') {
+            const timer = setTimeout(() => {
+                setBannerVisible(false);
+            }, 5000); // 5 seconds
+            return () => clearTimeout(timer);
+        } else {
+            setBannerVisible(true);
+        }
+    }, [orderConfirmed?.status]);
+
+    // Auto-rotate the promotional image banners every 4 seconds
+    useEffect(() => {
+        const imagePromos = promotions.filter(p => p.image);
+        if (imagePromos.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentPromoIdx((prev) => (prev + 1) % imagePromos.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [promotions]);
 
     const handleCategoryChange = (cat) => {
         setActiveCategory(cat);
@@ -168,11 +85,7 @@ const QRMenu = () => {
     }, [menu, activeCategory, searchQuery]);
 
     const sortedMenu = useMemo(() => {
-        return [...filteredMenu].sort((a, b) => {
-            if (a.promotion && !b.promotion) return -1;
-            if (!a.promotion && b.promotion) return 1;
-            return 0;
-        });
+        return filteredMenu;
     }, [filteredMenu]);
 
     const SkeletonCard = () => (
@@ -187,47 +100,50 @@ const QRMenu = () => {
     );
 
     return (
-        <div className="max-w-7xl mx-auto px-3 py-2.5 md:px-4 md:py-3 lg:px-5 animate-in fade-in duration-500 pb-24">
-            <Dialog open={showPromoModal} onOpenChange={handlePromoModalChange}>
-                <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col rounded-3xl border-accent/20 p-0 gap-0 sm:max-w-lg">
-                    <DialogHeader className="p-6 pb-3 text-left border-b border-slate-100">
-                        <DialogTitle className="text-lg font-black uppercase italic tracking-tight text-slate-900">
-                            Today&apos;s Offers
-                        </DialogTitle>
-                        <DialogDescription className="text-xs font-bold text-slate-400">
-                            Special promoted items — add to your order
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="overflow-y-auto p-4 grid grid-cols-2 gap-3">
-                        {promotedItems.map((product) => (
-                            <PromoProductCard
-                                key={product._id}
-                                product={product}
-                                cart={cart}
-                                addToCart={addToCart}
-                                removeFromCart={removeFromCart}
-                            />
-                        ))}
-                    </div>
-                </DialogContent>
-            </Dialog>
+        <div className="animate-in fade-in duration-500 pb-24">
+            <div className="sticky top-[57px] z-40 bg-slate-50/95 backdrop-blur-md pt-3 pb-3 shadow-sm border-b border-slate-200/50">
+                <div className="max-w-7xl mx-auto px-3 md:px-4 lg:px-5">
 
-            {orderConfirmed && orderConfirmed.status !== 'delivered' && (
+            {orderConfirmed && bannerVisible && (
                 <button
                     type="button"
                     onClick={() => setStep(5)}
                     aria-label="View order status"
-                    className="mb-2 md:mb-3 w-full rounded-lg border border-accent/20 bg-white px-2.5 py-2 shadow-sm shadow-accent/5 cursor-pointer hover:border-accent/35 active:scale-[0.99] transition-all text-left"
+                    className="mb-2 md:mb-3 w-full rounded-xl border border-accent/20 bg-white px-3 py-2.5 shadow-sm shadow-accent/5 cursor-pointer hover:border-accent/35 active:scale-[0.99] transition-all text-left relative overflow-hidden group flex flex-col"
                 >
-                    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                        <div
-                            className="h-full rounded-full bg-accent transition-[width] duration-700 ease-out"
-                            style={{
-                                width: (orderConfirmed.status || 'new') === 'new' ? '0%' :
-                                    orderConfirmed.status === 'preparing' ? '33%' :
-                                        orderConfirmed.status === 'ready' ? '66%' : '100%'
-                            }}
-                        />
+                    <div className="relative px-2 pb-1">
+                        <div className="absolute top-3 left-5 right-5 h-0.5 bg-slate-100 -translate-y-1/2 rounded-full z-0">
+                            <div
+                                className="h-full bg-accent rounded-full transition-all duration-1000 ease-in-out"
+                                style={{
+                                    width: (orderConfirmed.status || 'new') === 'new' ? '0%' :
+                                        orderConfirmed.status === 'preparing' ? '33.33%' :
+                                            orderConfirmed.status === 'ready' ? '66.66%' : '100%'
+                                }}
+                            />
+                        </div>
+                        <div className="flex justify-between items-center relative z-10">
+                            {[
+                                { id: 'new', icon: CheckCircle, label: 'Conf' },
+                                { id: 'preparing', icon: ChefHat, label: 'Prep' },
+                                { id: 'ready', icon: Sparkles, label: 'Ready' },
+                                { id: 'delivered', icon: MapPin, label: 'Srvd' }
+                            ].map((s, index) => {
+                                const statusOrder = ['new', 'preparing', 'ready', 'delivered'];
+                                const currentIndex = statusOrder.indexOf(orderConfirmed.status || 'new');
+                                const isCompleted = index <= currentIndex;
+                                const isCurrent = index === currentIndex;
+                                const Icon = s.icon;
+                                return (
+                                    <div key={s.id} className="relative z-10 flex flex-col items-center gap-1.5">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500 border-[1.5px] bg-white ${isCompleted ? 'border-accent text-accent shadow-md shadow-accent/20 scale-110' : 'border-slate-200 text-slate-300'}`}>
+                                            <Icon size={10} className={isCurrent && orderConfirmed.status !== 'delivered' ? 'animate-pulse' : ''} />
+                                        </div>
+                                        <span className={`text-[7px] font-bold uppercase tracking-wider ${isCompleted ? 'text-accent' : 'text-slate-300'}`}>{s.label}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </button>
             )}
@@ -270,43 +186,71 @@ const QRMenu = () => {
                             />
                         </div>
                     </div>
+                </div>
+                </div>
+            </div>
+            </div>
 
-                    {!isLoading && promosInView.length > 0 && (
-                        <section className="mb-2 rounded-lg border border-slate-100 bg-white px-2 py-1.5 shadow-sm">
-                            <div className="mb-1 flex items-center gap-1 px-0.5">
-                                <Sparkles size={11} className="text-accent shrink-0" />
-                                <h3 className="text-[9px] font-black uppercase tracking-wider text-slate-600">
-                                    Promotions
-                                </h3>
-                            </div>
-                            <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5 no-scrollbar">
-                                {promosInView.map((product) => (
-                                    <PromoProductCard
-                                        key={`strip-${product._id}`}
-                                        product={product}
-                                        cart={cart}
-                                        addToCart={addToCart}
-                                        removeFromCart={removeFromCart}
-                                        strip
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    )}
 
-                    <div className="overflow-y-auto scroller max-h-[calc(100vh-22rem)] pr-1 pb-16 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3">
+
+            <div className="max-w-7xl mx-auto px-3 md:px-4 lg:px-5 pt-2 w-full animate-in fade-in duration-700">
+                {/* Clean, Full-bleed homepage promotional banner carousel (Shows only the uploaded images) */}
+                {!isLoading && promotions && promotions.length > 0 && activeCategory === 'All' && !searchQuery && (() => {
+                    const imagePromos = promotions.filter(p => p.image);
+                    if (imagePromos.length === 0) return null;
+
+                    // Ensure the active index wraps around boundary safe
+                    const activeIdx = currentPromoIdx % imagePromos.length;
+                    const promo = imagePromos[activeIdx];
+
+                    return (
+                        <div className="mb-5 relative overflow-hidden rounded-2xl md:rounded-3xl shadow-md border border-slate-100/80 transition-all duration-300">
+                            <button
+                                type="button"
+                                onClick={() => handleBannerClick(promo)}
+                                className="w-full relative overflow-hidden block aspect-[21/9] md:aspect-[2.5/1] bg-slate-100 active:scale-[0.99] transition-all duration-300 group"
+                            >
+                                <img
+                                    src={promo.image}
+                                    alt={promo.title || "Restaurant Promotion"}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
+                                />
+                            </button>
+
+                            {/* Dot indicators for multiple image banners */}
+                            {imagePromos.length > 1 && (
+                                <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-20">
+                                    {imagePromos.map((_, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setCurrentPromoIdx(idx)}
+                                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                                                activeIdx === idx 
+                                                    ? 'w-4 bg-white shadow-md' 
+                                                    : 'w-1.5 bg-white/40 hover:bg-white/60'
+                                            }`}
+                                            aria-label={`Go to slide ${idx + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3">
                             {isLoading ? (
                                 Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
                             ) : (
                                 sortedMenu.map(product => (
                                     <button
                                         type="button"
+                                        id={`product-card-${product._id}`}
                                         key={product._id}
                                         onClick={() => !cart[product._id] && addToCart(product)}
-                                        className={`group flex flex-col items-center rounded-xl border bg-white p-2 text-center transition-all hover:border-accent/25 hover:shadow-md active:scale-[0.98] ${
-                                            cart[product._id] ? 'ring-1 ring-inset ring-accent/45 border-accent/25' : 'border-slate-100'
-                                        }`}
+                                        className={`group flex flex-col items-center rounded-xl border bg-white p-2 text-center transition-all duration-300 hover:border-accent/25 hover:shadow-md active:scale-[0.98] ${cart[product._id] ? 'ring-1 ring-inset ring-accent/45 border-accent/25' : 'border-slate-100'
+                                            }`}
                                     >
                                         <div className="w-full aspect-square mb-2 rounded-lg overflow-hidden flex-shrink-0 bg-slate-50 flex items-center justify-center relative">
                                             {product.image ? (
@@ -314,22 +258,31 @@ const QRMenu = () => {
                                             ) : (
                                                 <ChefHat size={32} className="text-slate-200" />
                                             )}
-
-                                            {product.promotion && (
-                                                <span className="absolute top-3 left-3 rounded-full bg-accent text-white text-[9px] font-black uppercase tracking-[0.18em] px-2 py-1 shadow-lg shadow-accent/20">
-                                                    Promo
-                                                </span>
+                                            {product.originalPrice > product.price && (
+                                                <div className="absolute top-1.5 left-1.5 bg-gradient-to-r from-red-500 to-[#ff4747] text-white text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded shadow-sm z-10">
+                                                    SALE
+                                                </div>
                                             )}
                                         </div>
 
-                                        <div className="w-full space-y-1">
-                                            <h3 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">
+                                        <div className="w-full flex justify-between items-start gap-1 text-left">
+                                            <h4 className="text-[11px] leading-tight font-black text-slate-800 uppercase tracking-tight line-clamp-2 flex-1">
                                                 {product.name}
-                                            </h3>
-                                            <div className="flex items-center justify-center gap-1.5">
-                                                <span className="text-sm font-black text-accent italic tracking-tighter">
+                                            </h4>
+                                            <div className="flex flex-col items-end shrink-0">
+                                                <span className="text-sm font-black text-accent tracking-tighter">
                                                     ₹{product.price}
                                                 </span>
+                                                {product.originalPrice > product.price && (
+                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                        <span className="text-[9px] text-slate-400 line-through font-semibold">
+                                                            ₹{product.originalPrice}
+                                                        </span>
+                                                        <span className="text-[8px] bg-red-50 text-red-600 font-bold px-1 rounded-sm border border-red-100 whitespace-nowrap">
+                                                            {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -366,8 +319,6 @@ const QRMenu = () => {
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
     );
 };
 
