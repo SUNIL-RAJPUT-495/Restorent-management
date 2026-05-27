@@ -35,8 +35,6 @@ import { Label } from "@/components/ui/label";
 import BillReceipt from "@/components/BillReceipt";
 
 
-const categories = ["All", "Starters", "Main Course", "Drinks", "Desserts"];
-
 const POS = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -145,6 +143,11 @@ const POS = () => {
       return response.data;
     },
   });
+
+  const categories = useMemo(() => {
+    const list = new Set(menuItems.map((m) => m.category).filter(Boolean));
+    return ["All", ...Array.from(list)];
+  }, [menuItems]);
 
   // Create Order Mutation
   const orderMutation = useMutation({

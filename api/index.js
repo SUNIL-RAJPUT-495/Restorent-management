@@ -15,6 +15,7 @@ import tableRoutes from './src/routes/tableRoutes.js';
 import ingredientRoutes from './src/routes/ingredientRoutes.js';
 import settingRoutes from './src/routes/settingRoutes.js';
 import promotionRoutes from './src/routes/promotionRoutes.js';
+import categoryRoutes from './src/routes/categoryRoutes.js';
 
 import publicRoutes from './src/routes/publicRoutes.js';
 
@@ -71,6 +72,7 @@ app.use('/api/tables', tableRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/categories', categoryRoutes);
 
 app.use('/api/public', publicRoutes);
 

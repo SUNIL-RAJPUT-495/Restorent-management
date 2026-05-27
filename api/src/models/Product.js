@@ -31,6 +31,14 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  trackStock: {
+    type: Boolean,
+    default: false,
+  },
+  stock: {
+    type: Number,
+    default: 0,
+  },
   recipe: [{
     ingredientId: {
       type: mongoose.Schema.Types.ObjectId,

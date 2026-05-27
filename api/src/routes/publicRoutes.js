@@ -1,9 +1,9 @@
 import express from 'express';
-import { 
-  getMenu, 
-  getTables, 
-  placeOrder, 
-  createRazorpayOrder, 
+import {
+  getMenu,
+  getTables,
+  placeOrder,
+  createRazorpayOrder,
   verifyRazorpayPayment,
   createImbOrder,
   verifyImbPayment,

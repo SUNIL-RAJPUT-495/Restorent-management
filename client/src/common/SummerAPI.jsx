@@ -35,6 +35,11 @@ const SummaryApi = {
     updateIngredient: (id) => ({ url: baseURL + `/api/ingredients/${id}`, method: "put" }),
     deleteIngredient: (id) => ({ url: baseURL + `/api/ingredients/${id}`, method: "delete" }),
 
+    // Categories
+    getCategories:  { url: baseURL + "/api/categories", method: "get" },
+    addCategory:     { url: baseURL + "/api/categories/add", method: "post" },
+    deleteCategory:  (id) => ({ url: baseURL + `/api/categories/${id}`, method: "delete" }),
+
     // Settings
     getSettings:    { url: baseURL + "/api/settings", method: "get" },
     updateSettings: { url: baseURL + "/api/settings", method: "put" },

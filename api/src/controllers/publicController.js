@@ -4,6 +4,7 @@ import Order from '../models/Order.js';
 import Setting from '../models/Setting.js';
 import Feedback from '../models/Feedback.js';
 import PromoBanner from '../models/PromoBanner.js';
+import { deductInventoryStock } from '../utils/inventoryHelper.js';
 import { getFullImageUrl } from '../utils/imageUrl.js';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
@@ -26,7 +27,7 @@ export const getRestaurantInfo = async (req, res) => {
   try {
     const settings = await Setting.findOne({}); // Fetch the only settings available
     if (!settings) return res.status(404).json({ message: "Restaurant not found" });
-    
+
     res.json({
       restaurantName: settings.restaurantName,
       logo: getFullImageUrl(req, settings.logo),
@@ -115,6 +116,9 @@ export const placeOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
+
+    // Deduct stock from inventory for customer self-order
+    await deductInventoryStock(createdOrder);
 
     // Mark table as occupied
     if (tableNumber) {
@@ -226,6 +230,9 @@ export const createImbOrder = async (req, res) => {
 
     const savedOrder = await order.save();
 
+    // Deduct stock from inventory for online customer self-order
+    await deductInventoryStock(savedOrder);
+
     // Mark table as occupied
     if (tableNumber) {
       await Table.findOneAndUpdate(
@@ -240,7 +247,7 @@ export const createImbOrder = async (req, res) => {
     }
 
     const cleanPhone = String(customerPhone).replace(/\D/g, "");
-    
+
     const payload = new URLSearchParams({
       customer_mobile: cleanPhone,
       user_token: process.env.IMB_CLIENT_SECRET,
@@ -383,7 +390,7 @@ export const imbWebhook = async (req, res) => {
 export const submitFeedback = async (req, res) => {
   try {
     const { orderNumber, rating, comment, customerName, customerPhone } = req.body;
-    
+
     const feedback = new Feedback({
       orderNumber,
       rating,

@@ -177,32 +177,23 @@ const Settings = () => {
   const updateSettingsMutation = useMutation({
     mutationFn: async (data) => {
       let payload = { ...data };
-      const formData = new FormData();
-      let compressedBlob = null;
 
       if (payload.logo instanceof File) {
         try {
           const compressedBase64 = await compressImageFile(payload.logo, 500, 0.75);
-          compressedBlob = base64ToBlob(compressedBase64, 'image/jpeg');
+          payload.logo = compressedBase64;
         } catch (error) {
-          console.error("Logo compression failed, falling back to raw upload:", error);
-          compressedBlob = payload.logo;
+          console.error("Logo compression failed, falling back to raw base64 upload:", error);
+          payload.logo = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(payload.logo);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+          });
         }
       }
 
-      Object.keys(payload).forEach(key => {
-        if (key === 'logo') {
-          if (compressedBlob) {
-            formData.append('logo', compressedBlob, 'logo.jpg');
-          } else if (typeof payload.logo === 'string') {
-            formData.append('logo', payload.logo);
-          }
-        } else if (payload[key] !== undefined && payload[key] !== null) {
-          formData.append(key, payload[key]);
-        }
-      });
-
-      const response = await AxiosAdmin.put(SummaryApi.updateSettings.url, formData);
+      const response = await AxiosAdmin.put(SummaryApi.updateSettings.url, payload);
       return response.data;
     },
     onSuccess: () => {

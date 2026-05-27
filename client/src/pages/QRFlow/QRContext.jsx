@@ -88,13 +88,13 @@ export const QRProvider = ({ children }) => {
             const promo = promotions.find(p => {
                 if (p.active === false) return false;
                 if (!p.productId) return false;
-                
+
                 const promoProdId = typeof p.productId === 'object'
                     ? (p.productId._id || p.productId.id)
                     : p.productId;
-                
+
                 const currentProdId = product._id || product.id;
-                
+
                 return promoProdId && currentProdId && promoProdId.toString().trim() === currentProdId.toString().trim();
             });
 
@@ -222,18 +222,14 @@ export const QRProvider = ({ children }) => {
     useEffect(() => {
         if (step === 5 || (step === 1 && orderConfirmed && orderConfirmed.status !== 'delivered')) {
             const socket = io(baseURL);
-            
+
             socket.on('connect', () => console.log('QR Flow Connected to WebSocket'));
-            
+
             socket.on('orderUpdated', (updatedOrder) => {
                 setOrderConfirmed((prev) => {
                     if (prev && prev.orderNumber === updatedOrder.orderNumber) {
                         localStorage.setItem('qr_last_order', JSON.stringify(updatedOrder));
                         if (updatedOrder.status === 'delivered') {
-                            if (step === 1) {
-                                clearOrderFlow();
-                                return null;
-                            }
                             setTimeout(() => setStep(6), 2000);
                         }
                         return updatedOrder;
@@ -289,7 +285,7 @@ export const QRProvider = ({ children }) => {
         localStorage.removeItem('qr_current_step');
         localStorage.removeItem('qr_last_order');
         setFeedback({ rating: 0, comment: '' });
-        setStep(0);  // Go back to onboarding so new customer can start fresh
+        setStep(1);  // Go back to menu so they don't have to login again
     };
 
     const startNewOrder = () => {

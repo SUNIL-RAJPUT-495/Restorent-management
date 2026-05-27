@@ -23,8 +23,8 @@ AxiosAdmin.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            localStorage.removeItem("resto_auth_token");
-            localStorage.removeItem("rw_admin_info");
+            localStorage.removeItem("Asthronox_auth_token");
+            localStorage.removeItem("Asthronox_admin_info");
             window.dispatchEvent(new CustomEvent("on-unauthorized-admin"));
         }
         return Promise.reject(error);

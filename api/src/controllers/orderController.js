@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import Table from '../models/Table.js';
+import { deductInventoryStock, restoreInventoryStock, adjustInventoryStock } from '../utils/inventoryHelper.js';
 
 export const createOrder = async (req, res) => {
   try {
@@ -19,6 +20,11 @@ export const createOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
+    
+    // Automatically deduct inventory stock if not cancelled
+    if (createdOrder.status !== 'cancelled') {
+      await deductInventoryStock(createdOrder);
+    }
     
     // Automatically mark table as occupied if it's fine-dine
     if (tableNumber) {
@@ -58,7 +64,13 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (order) {
-      if (req.body.items) order.items = req.body.items;
+      if (req.body.items) {
+        // If order items are being updated (and order isn't cancelled), adjust inventory levels
+        if (order.status !== 'cancelled') {
+          await adjustInventoryStock(order.items, req.body.items);
+        }
+        order.items = req.body.items;
+      }
       if (req.body.paymentStatus) {
         console.log(`Order ${req.params.id}: paymentStatus update requested -> ${req.body.paymentStatus}`);
         order.paymentStatus = req.body.paymentStatus;
@@ -66,6 +78,12 @@ export const updateOrderStatus = async (req, res) => {
         // Only explicit status updates should change the order workflow state.
       }
       if (req.body.status) {
+        // Handle transitions to/from cancelled status for stock recovery
+        if (req.body.status === 'cancelled' && order.status !== 'cancelled') {
+          await restoreInventoryStock(order);
+        } else if (order.status === 'cancelled' && req.body.status !== 'cancelled') {
+          await deductInventoryStock(order);
+        }
         order.status = req.body.status;
       }
 

@@ -250,24 +250,45 @@ const SelfOrders = () => {
                                 <div className="space-y-3 pt-4">
                                     <div>
                                         <p className="text-sm font-semibold text-slate-600">Payment Status</p>
-                                        <p className="text-xs text-muted-foreground">Select current payment status for this self order.</p>
+                                        {selectedOrder.paymentMethod === 'online' ? (
+                                            <p className="text-xs text-muted-foreground">This order is paid via online payment.</p>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">Select current payment status for this self order.</p>
+                                        )}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <Button
-                                            variant={selectedOrder.paymentStatus === 'pending' ? 'secondary' : 'outline'}
-                                            onClick={() => handleTogglePayment(selectedOrder, 'pending')}
-                                            disabled={updatePaymentMutation.isPending || selectedOrder.paymentStatus === 'pending'}
-                                        >
-                                            Pending
-                                        </Button>
-                                        <Button
-                                            variant={selectedOrder.paymentStatus === 'completed' ? 'secondary' : 'outline'}
-                                            onClick={() => handleTogglePayment(selectedOrder, 'completed')}
-                                            disabled={updatePaymentMutation.isPending || selectedOrder.paymentStatus === 'completed'}
-                                        >
-                                            Completed
-                                        </Button>
-                                    </div>
+                                    {selectedOrder.paymentMethod === 'online' ? (
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider ${
+                                                selectedOrder.paymentStatus === 'completed' ? 'bg-success/10 text-success border border-success/20' : 
+                                                selectedOrder.paymentStatus === 'failed' ? 'bg-destructive/10 text-destructive border border-destructive/20' : 
+                                                'bg-warning/10 text-warning border border-warning/20'
+                                            }`}>
+                                                <span className={`w-2 h-2 rounded-full ${
+                                                    selectedOrder.paymentStatus === 'completed' ? 'bg-success animate-pulse' : 
+                                                    selectedOrder.paymentStatus === 'failed' ? 'bg-destructive animate-pulse' : 
+                                                    'bg-warning animate-pulse'
+                                                }`} />
+                                                {selectedOrder.paymentStatus}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                                variant={selectedOrder.paymentStatus === 'pending' ? 'secondary' : 'outline'}
+                                                onClick={() => handleTogglePayment(selectedOrder, 'pending')}
+                                                disabled={updatePaymentMutation.isPending || selectedOrder.paymentStatus === 'pending'}
+                                            >
+                                                Pending
+                                            </Button>
+                                            <Button
+                                                variant={selectedOrder.paymentStatus === 'completed' ? 'secondary' : 'outline'}
+                                                onClick={() => handleTogglePayment(selectedOrder, 'completed')}
+                                                disabled={updatePaymentMutation.isPending || selectedOrder.paymentStatus === 'completed'}
+                                            >
+                                                Completed
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

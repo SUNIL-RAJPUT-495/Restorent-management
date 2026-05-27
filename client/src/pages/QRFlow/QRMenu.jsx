@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, ChefHat, Plus, Minus, Sparkles, ArrowRight, CheckCircle, MapPin } from 'lucide-react';
+import { Search, ChefHat, Plus, Minus, Sparkles, ArrowRight, CheckCircle, MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQRContext } from './QRContext';
 import { toast } from 'sonner';
-
-
+import { motion, AnimatePresence } from 'framer-motion';
 
 const QRMenu = () => {
-    const { menu, isLoading, cart, addToCart, removeFromCart, setStep, orderConfirmed, promotions } = useQRContext();
+    const { menu, isLoading, cart, addToCart, removeFromCart, setStep, orderConfirmed, promotions, promoModalOpen, setPromoModalOpen } = useQRContext();
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPromoIdx, setCurrentPromoIdx] = useState(0);
+    const [currentModalPromoIdx, setCurrentModalPromoIdx] = useState(0);
     const [bannerVisible, setBannerVisible] = useState(true);
 
     const handleBannerClick = (promo) => {
@@ -55,15 +55,35 @@ const QRMenu = () => {
         }
     }, [orderConfirmed?.status]);
 
-    // Auto-rotate the promotional image banners every 4 seconds
+    // Auto-rotate the promotional image banners every 12 seconds (resets timer if manually changed)
     useEffect(() => {
         const imagePromos = promotions.filter(p => p.image);
         if (imagePromos.length <= 1) return;
         const interval = setInterval(() => {
             setCurrentPromoIdx((prev) => (prev + 1) % imagePromos.length);
-        }, 4000);
+        }, 12000); // 12 seconds (between 10 to 15 seconds)
         return () => clearInterval(interval);
-    }, [promotions]);
+    }, [promotions, currentPromoIdx]);
+
+    // Open the promotional banner modal when a user lands on the menu
+    useEffect(() => {
+        if (!isLoading && promotions && promotions.length > 0) {
+            const activePromos = promotions.filter(p => p.active !== false && p.image);
+            if (activePromos.length > 0 && !sessionStorage.getItem('qr_promo_modal_seen')) {
+                setPromoModalOpen(true);
+            }
+        }
+    }, [isLoading, promotions, setPromoModalOpen]);
+
+    const handleClosePromoModal = () => {
+        setPromoModalOpen(false);
+        sessionStorage.setItem('qr_promo_modal_seen', 'true');
+    };
+
+    const handlePromoModalClick = (promo) => {
+        handleClosePromoModal();
+        handleBannerClick(promo);
+    };
 
     const handleCategoryChange = (cat) => {
         setActiveCategory(cat);
@@ -101,7 +121,7 @@ const QRMenu = () => {
 
     return (
         <div className="animate-in fade-in duration-500 pb-24">
-            <div className="sticky top-[57px] z-40 bg-slate-50/95 backdrop-blur-md pt-3 pb-3 shadow-sm border-b border-slate-200/50">
+            <div className="sticky top-[57px] z-40 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2.5 shadow-sm border-b border-slate-200/50">
                 <div className="max-w-7xl mx-auto px-3 md:px-4 lg:px-5">
 
             {orderConfirmed && bannerVisible && (
@@ -109,7 +129,7 @@ const QRMenu = () => {
                     type="button"
                     onClick={() => setStep(5)}
                     aria-label="View order status"
-                    className="mb-2 md:mb-3 w-full rounded-xl border border-accent/20 bg-white px-3 py-2.5 shadow-sm shadow-accent/5 cursor-pointer hover:border-accent/35 active:scale-[0.99] transition-all text-left relative overflow-hidden group flex flex-col"
+                    className="mb-1.5 md:mb-2 w-full rounded-xl border border-accent/20 bg-white px-3 py-2.5 shadow-sm shadow-accent/5 cursor-pointer hover:border-accent/35 active:scale-[0.99] transition-all text-left relative overflow-hidden group flex flex-col"
                 >
                     <div className="relative px-2 pb-1">
                         <div className="absolute top-3 left-5 right-5 h-0.5 bg-slate-100 -translate-y-1/2 rounded-full z-0">
@@ -147,6 +167,79 @@ const QRMenu = () => {
                     </div>
                 </button>
             )}
+            
+                {/* Clean, Full-bleed homepage promotional banner carousel (Shows only the uploaded images) */}
+                {!isLoading && promotions && promotions.length > 0 && (() => {
+                    const imagePromos = promotions.filter(p => p.image);
+                    if (imagePromos.length === 0) return null;
+
+                    // Ensure the active index wraps around boundary safe
+                    const activeIdx = currentPromoIdx % imagePromos.length;
+                    const promo = imagePromos[activeIdx];
+
+                    return (
+                        <div className="relative rounded-2xl overflow-hidden mb-3 shadow-md border border-slate-100/50 duration-300 bg-white">
+                            <button
+                                type="button"
+                                onClick={() => handleBannerClick(promo)}
+                                className="w-full relative overflow-hidden block aspect-[21/9] md:aspect-[2.5/1] bg-slate-100 active:scale-[0.99] transition-all duration-300 group"
+                            >
+                                <img
+                                    src={promo.image}
+                                    alt={promo.title || "Restaurant Promotion"}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
+                                />
+                            </button>
+
+                            {/* Side Arrow Buttons for Menu Banner */}
+                            {imagePromos.length >= 1 && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentPromoIdx((prev) => (prev - 1 + imagePromos.length) % imagePromos.length);
+                                        }}
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-transparent hover:bg-white/15 hover:scale-110 active:scale-90 transition-all text-white flex items-center justify-center cursor-pointer"
+                                        aria-label="Previous promotion"
+                                    >
+                                        <ChevronLeft size={22} className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" strokeWidth={3.5} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentPromoIdx((prev) => (prev + 1) % imagePromos.length);
+                                        }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-transparent hover:bg-white/15 hover:scale-110 active:scale-90 transition-all text-white flex items-center justify-center cursor-pointer"
+                                        aria-label="Next promotion"
+                                    >
+                                        <ChevronRight size={22} className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" strokeWidth={3.5} />
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Dot indicators for multiple image banners */}
+                            {imagePromos.length >= 1 && (
+                                <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-20">
+                                    {imagePromos.map((_, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setCurrentPromoIdx(idx)}
+                                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                                                activeIdx === idx 
+                                                    ? 'w-4 bg-white shadow-md' 
+                                                    : 'w-1.5 bg-white/40 hover:bg-white/60'
+                                            }`}
+                                            aria-label={`Go to slide ${idx + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
 
             <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
                 <div className="lg:w-48 shrink-0 space-y-2">
@@ -194,50 +287,7 @@ const QRMenu = () => {
 
 
             <div className="max-w-7xl mx-auto px-3 md:px-4 lg:px-5 pt-2 w-full animate-in fade-in duration-700">
-                {/* Clean, Full-bleed homepage promotional banner carousel (Shows only the uploaded images) */}
-                {!isLoading && promotions && promotions.length > 0 && activeCategory === 'All' && !searchQuery && (() => {
-                    const imagePromos = promotions.filter(p => p.image);
-                    if (imagePromos.length === 0) return null;
-
-                    // Ensure the active index wraps around boundary safe
-                    const activeIdx = currentPromoIdx % imagePromos.length;
-                    const promo = imagePromos[activeIdx];
-
-                    return (
-                        <div className="mb-5 relative overflow-hidden rounded-2xl md:rounded-3xl shadow-md border border-slate-100/80 transition-all duration-300">
-                            <button
-                                type="button"
-                                onClick={() => handleBannerClick(promo)}
-                                className="w-full relative overflow-hidden block aspect-[21/9] md:aspect-[2.5/1] bg-slate-100 active:scale-[0.99] transition-all duration-300 group"
-                            >
-                                <img
-                                    src={promo.image}
-                                    alt={promo.title || "Restaurant Promotion"}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
-                                />
-                            </button>
-
-                            {/* Dot indicators for multiple image banners */}
-                            {imagePromos.length > 1 && (
-                                <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-20">
-                                    {imagePromos.map((_, idx) => (
-                                        <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() => setCurrentPromoIdx(idx)}
-                                            className={`h-1.5 rounded-full transition-all duration-300 ${
-                                                activeIdx === idx 
-                                                    ? 'w-4 bg-white shadow-md' 
-                                                    : 'w-1.5 bg-white/40 hover:bg-white/60'
-                                            }`}
-                                            aria-label={`Go to slide ${idx + 1}`}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })()}
+               
 
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3">
                             {isLoading ? (
@@ -318,6 +368,122 @@ const QRMenu = () => {
                             )}
                         </div>
                     </div>
+
+                    {/* Premium Promotional Popup Modal */}
+                    <AnimatePresence>
+                        {promoModalOpen && (() => {
+                            const activePromos = promotions.filter(p => p.active !== false && p.image);
+                            if (activePromos.length === 0) return null;
+                            
+                            // Show the selected active banner in the popup modal
+                            const modalIdx = currentModalPromoIdx % activePromos.length;
+                            const promo = activePromos[modalIdx];
+                            
+                            return (
+                                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                                    {/* Backdrop overlay */}
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        onClick={handleClosePromoModal}
+                                        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+                                    />
+                                    
+                                    {/* Modal Container */}
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        transition={{ type: "spring", duration: 0.5 }}
+                                        className="relative w-full max-w-[360px] bg-white rounded-[32px] overflow-hidden shadow-2xl border border-slate-100 z-10 flex flex-col text-center"
+                                    >
+                                        {/* Top Accent Bar */}
+                                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-accent to-[#ff6b6b]" />
+                                        
+                                        {/* Close Button ("X") */}
+                                        <button
+                                            type="button"
+                                            onClick={handleClosePromoModal}
+                                            className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors active:scale-90"
+                                            aria-label="Close promotion banner modal"
+                                        >
+                                            <X size={16} strokeWidth={2.5} />
+                                        </button>
+                                        
+                                        {/* Content Area */}
+                                        <div className="p-5 pt-7 space-y-4">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-center gap-1.5 text-accent text-[10px] font-black uppercase tracking-[0.2em] italic">
+                                                    <Sparkles size={12} className="animate-pulse" />
+                                                    Exclusive Offer
+                                                </div>
+                                                
+                                            </div>
+                                            
+                                            {/* Clickable Banner Image Container with Navigation Arrows */}
+                                            <div className="relative w-full aspect-[21/9] bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden shadow-md group">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handlePromoModalClick(promo)}
+                                                    className="w-full h-full relative overflow-hidden active:scale-[0.98] transition-all duration-300 block"
+                                                >
+                                                    <img
+                                                        src={promo.image}
+                                                        alt={promo.title || "Special Promo Offer"}
+                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    />
+                                                    
+                                                    {/* Click Hover Action indicator */}
+                                                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                       
+                                                    </div>
+                                                </button>
+
+                                                {/* Left & Right Side Arrows in Modal */}
+                                                {activePromos.length >= 1 && (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setCurrentModalPromoIdx((prev) => (prev - 1 + activePromos.length) % activePromos.length);
+                                                            }}
+                                                            className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-transparent hover:bg-white/15 hover:scale-110 active:scale-90 transition-all text-white flex items-center justify-center cursor-pointer"
+                                                            aria-label="Previous offer"
+                                                        >
+                                                            <ChevronLeft size={18} className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" strokeWidth={3.5} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setCurrentModalPromoIdx((prev) => (prev + 1) % activePromos.length);
+                                                            }}
+                                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-transparent hover:bg-white/15 hover:scale-110 active:scale-90 transition-all text-white flex items-center justify-center cursor-pointer"
+                                                            aria-label="Next offer"
+                                                        >
+                                                            <ChevronRight size={18} className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" strokeWidth={3.5} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Action Button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => handlePromoModalClick(promo)}
+                                                className="w-full bg-accent text-white rounded-2xl py-3.5 font-black text-xs uppercase tracking-widest shadow-lg shadow-accent/25 hover:opacity-95 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                                            >
+                                                Claim Offer
+                                                <ArrowRight size={14} strokeWidth={2.5} />
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            );
+                        })()}
+                    </AnimatePresence>
                 </div>
     );
 };

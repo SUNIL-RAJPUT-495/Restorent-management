@@ -69,6 +69,13 @@ const QRFeedback = () => {
                 >
                     Submit Feedback
                 </button>
+
+                <button
+                    onClick={resetFlow}
+                    className="w-full bg-slate-100 text-slate-500 rounded-2xl py-4 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-200 active:scale-95 transition-all mt-3 border border-slate-200/50"
+                >
+                    Skip & Go to Menu
+                </button>
             </div>
         </div>
     );
